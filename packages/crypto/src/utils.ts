@@ -23,8 +23,9 @@ export function getRandomValues(array: Uint8Array): Uint8Array {
 
 export function arrayBufferToBase64(buffer: ArrayBuffer | Uint8Array): string {
   const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
-  if (typeof Buffer !== "undefined") {
-    return Buffer.from(bytes).toString("base64");
+  const nodeBuf = (globalThis as { Buffer?: { from: (data: Uint8Array) => { toString: (enc: string) => string } } }).Buffer;
+  if (typeof nodeBuf !== "undefined") {
+    return nodeBuf.from(bytes).toString("base64");
   }
   let binary = "";
   for (let i = 0; i < bytes.byteLength; i++) {
@@ -34,8 +35,9 @@ export function arrayBufferToBase64(buffer: ArrayBuffer | Uint8Array): string {
 }
 
 export function base64ToArrayBuffer(base64: string): ArrayBuffer {
-  if (typeof Buffer !== "undefined") {
-    const buf = Buffer.from(base64, "base64");
+  const nodeBuf = (globalThis as { Buffer?: { from: (str: string, enc: string) => { buffer: ArrayBuffer; byteOffset: number; byteLength: number } } }).Buffer;
+  if (typeof nodeBuf !== "undefined") {
+    const buf = nodeBuf.from(base64, "base64");
     return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
   }
   const binaryString = atob(base64);
