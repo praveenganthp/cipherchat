@@ -314,8 +314,11 @@ export const conversationRoutes: FastifyPluginAsync = async (fastify) => {
         : {}),
     });
 
+    // Return messages in chronological order (oldest to newest)
+    const chronologicalMessages = [...messages].reverse();
+
     return reply.send({
-      messages: messages.map((msg) => ({
+      messages: chronologicalMessages.map((msg) => ({
         id: msg.id,
         conversationId: msg.conversationId,
         senderId: msg.senderId,

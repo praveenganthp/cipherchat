@@ -115,7 +115,11 @@ export default function ChatDashboardPage() {
       const res = await apiFetch<{ messages: EncryptedMessageRecord[] }>(
         `/api/conversations/${convId}/messages`
       );
-      setMessages(res.messages);
+      // Ensure chronological ordering: oldest first, newest last
+      const chronological = [...res.messages].sort(
+        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      );
+      setMessages(chronological);
 
       // Decrypt messages locally in browser memory
       for (const msg of res.messages) {
@@ -219,7 +223,10 @@ export default function ChatDashboardPage() {
 
             setMessages((prev) => {
               if (prev.some((m) => m.id === newRecord.id)) return prev;
-              return [...prev, newRecord];
+              const next = [...prev, newRecord];
+              return next.sort(
+                (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+              );
             });
 
             // Decrypt immediately if sender public key is present

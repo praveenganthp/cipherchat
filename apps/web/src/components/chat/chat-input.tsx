@@ -49,6 +49,13 @@ export function ChatInput({ onSendMessage, onTyping, disabled = false }: ChatInp
     }
   };
 
+  // Auto-focus textarea when conversation is active
+  React.useEffect(() => {
+    if (!disabled) {
+      textareaRef.current?.focus();
+    }
+  }, [disabled]);
+
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const trimmed = content.trim();
@@ -68,12 +75,17 @@ export function ChatInput({ onSendMessage, onTyping, disabled = false }: ChatInp
       setSelectedFile(null);
       if (textareaRef.current) {
         textareaRef.current.style.height = "auto";
+        textareaRef.current.focus();
       }
       if (onTyping) {
         onTyping(false);
       }
     } finally {
       setIsSending(false);
+      // Keep cursor automatically focused in the message box
+      requestAnimationFrame(() => {
+        textareaRef.current?.focus();
+      });
     }
   };
 
@@ -167,13 +179,13 @@ export function ChatInput({ onSendMessage, onTyping, disabled = false }: ChatInp
       </div>
 
       {/* Input form */}
-      <form onSubmit={handleSubmit} className="flex items-end space-x-1.5 sm:space-x-2">
+      <form onSubmit={handleSubmit} className="flex items-center gap-2">
         <input
           type="file"
           ref={fileInputRef}
           onChange={handleFileChange}
           className="hidden"
-          disabled={disabled || isSending}
+          disabled={disabled}
         />
 
         <Button
@@ -181,8 +193,8 @@ export function ChatInput({ onSendMessage, onTyping, disabled = false }: ChatInp
           variant="ghost"
           size="icon"
           onClick={() => fileInputRef.current?.click()}
-          disabled={disabled || isSending}
-          className="h-10 w-10 sm:h-9 sm:w-9 shrink-0 text-muted-foreground hover:text-foreground"
+          disabled={disabled}
+          className="h-10 w-10 shrink-0 text-muted-foreground hover:text-foreground hover:bg-secondary/80 rounded-xl"
           aria-label="Attach file"
         >
           <Paperclip className="h-5 w-5" />
@@ -204,8 +216,8 @@ export function ChatInput({ onSendMessage, onTyping, disabled = false }: ChatInp
                 ? "Select a conversation to start chatting"
                 : "Type an encrypted message..."
             }
-            disabled={disabled || isSending}
-            className="w-full resize-none rounded-lg border border-border bg-card px-3 py-2 text-base sm:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary max-h-[140px]"
+            disabled={disabled}
+            className="w-full resize-none rounded-xl border border-border bg-card px-3.5 py-2.5 text-base sm:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary max-h-[140px] leading-snug"
           />
         </div>
 
@@ -216,7 +228,7 @@ export function ChatInput({ onSendMessage, onTyping, disabled = false }: ChatInp
           isLoading={isSending}
           disabled={disabled || (!content.trim() && !selectedFile)}
           aria-label="Send message"
-          className="h-10 w-10 sm:h-9 sm:w-9 shrink-0"
+          className="h-10 w-10 shrink-0 rounded-xl shadow-sm"
         >
           <Send className="h-4 w-4" />
         </Button>
