@@ -1,0 +1,42 @@
+{
+  "name": "cipherchat-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CipherChat — Privacy-First, End-to-End Encrypted Messaging Platform",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces --if-present",
+    "dev:server": "npm run dev --workspace=@cipherchat/server",
+    "dev:web": "npm run dev --workspace=@cipherchat/web",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "db:generate": "npx prisma generate",
+    "db:migrate": "npx prisma migrate dev",
+    "db:push": "npx prisma db push",
+    "db:seed": "npx tsx prisma/seed.ts",
+    "clean": "rm -rf node_modules apps/*/node_modules packages/*/node_modules apps/*/.next"
+  },
+  "keywords": [
+    "e2ee",
+    "encryption",
+    "privacy",
+    "messaging",
+    "fastify",
+    "nextjs",
+    "prisma",
+    "webrtc",
+    "websockets"
+  ],
+  "author": "CipherChat Contributors",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "prisma": "^6.1.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

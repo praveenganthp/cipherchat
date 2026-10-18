@@ -1,0 +1,240 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum ConversationType {
+  DIRECT
+  GROUP
+}
+
+enum DisappearingMode {
+  OFF
+  TIMER
+  VIEW_ONCE
+  VIEW_TWICE
+  CUSTOM_VIEWS
+}
+
+enum MessageType {
+  TEXT
+  ATTACHMENT
+  EVENT
+}
+
+enum PresenceVisibility {
+  EVERYONE
+  CONTACTS_ONLY
+  NOBODY
+}
+
+model User {
+  id                    String              @id @default(uuid()) @db.Uuid
+  email                 String              @unique
+  username              String              @unique
+  displayName           String
+  passwordHash          String
+  avatarUrl             String?
+  bio                   String?
+  readReceiptsEnabled   Boolean             @default(true)
+  typingIndicatorEnabled Boolean            @default(true)
+  presenceVisibility    PresenceVisibility  @default(EVERYONE)
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  devices               Device[]
+  sessions              Session[]
+  memberships           ConversationMember[]
+  createdConversations  Conversation[]      @relation("CreatedConversations")
+  createdInvitations    ConversationInvitation[]
+  sentMessages          EncryptedMessage[]  @relation("SentMessages")
+  receivedMessages      EncryptedMessage[]  @relation("ReceivedMessages")
+  messageViews          MessageView[]
+  auditLogs             SecurityAuditLog[]
+
+  @@index([username])
+  @@index([email])
+}
+
+model Device {
+  id                String       @id @default(uuid()) @db.Uuid
+  userId            String       @db.Uuid
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceName        String
+  deviceType        String       @default("WEB") // WEB, MOBILE, DESKTOP
+  identityPublicKey String       // Base64 SPKI ECDSA P-256
+  signedPreKey      String       // Base64 SPKI ECDH P-256
+  preKeySignature   String       // Base64 ECDSA signature over signedPreKey
+  lastSeenAt        DateTime     @default(now())
+  isRevoked         Boolean      @default(false)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  sessions          Session[]
+  sentMessages      EncryptedMessage[] @relation("SenderDeviceMessages")
+  receivedMessages  EncryptedMessage[] @relation("RecipientDeviceMessages")
+  messageViews      MessageView[]
+
+  @@index([userId, isRevoked])
+}
+
+model Session {
+  id               String    @id @default(uuid()) @db.Uuid
+  userId           String    @db.Uuid
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceId         String    @db.Uuid
+  device           Device    @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  refreshTokenHash String    @unique
+  userAgent        String?
+  ipAddress        String?
+  expiresAt        DateTime
+  createdAt        DateTime  @default(now())
+
+  @@index([userId])
+  @@index([deviceId])
+}
+
+model Conversation {
+  id                    String            @id @default(uuid()) @db.Uuid
+  type                  ConversationType  @default(DIRECT)
+  title                 String?
+  description           String?
+  avatarUrl             String?
+  createdById           String            @db.Uuid
+  createdBy             User              @relation("CreatedConversations", fields: [createdById], references: [id], onDelete: Restrict)
+  disappearingMode      DisappearingMode  @default(OFF)
+  disappearingTtlSeconds Int              @default(0)
+  defaultViewLimit      Int               @default(0) // 0 means unlimited
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+
+  members               ConversationMember[]
+  invitations           ConversationInvitation[]
+  messages              EncryptedMessage[]
+
+  @@index([type])
+  @@index([createdById])
+}
+
+model ConversationMember {
+  id             String        @id @default(uuid()) @db.Uuid
+  conversationId String        @db.Uuid
+  conversation   Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId         String        @db.Uuid
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           Role          @default(MEMBER)
+  joinedAt       DateTime      @default(now())
+  lastReadAt     DateTime      @default(now())
+  leftAt         DateTime?
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+  @@index([conversationId])
+}
+
+model ConversationInvitation {
+  id             String        @id @default(uuid()) @db.Uuid
+  conversationId String        @db.Uuid
+  conversation   Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  tokenHash      String        @unique
+  createdById    String        @db.Uuid
+  createdBy      User          @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  maxUses        Int           @default(10)
+  usedCount      Int           @default(0)
+  expiresAt      DateTime
+  isRevoked      Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+
+  @@index([conversationId])
+  @@index([tokenHash, isRevoked])
+}
+
+model EncryptedMessage {
+  id                 String       @id @default(uuid()) @db.Uuid
+  conversationId     String       @db.Uuid
+  conversation       Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId           String       @db.Uuid
+  sender             User         @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  senderDeviceId     String       @db.Uuid
+  senderDevice       Device       @relation("SenderDeviceMessages", fields: [senderDeviceId], references: [id], onDelete: Cascade)
+  recipientId        String       @db.Uuid
+  recipient          User         @relation("ReceivedMessages", fields: [recipientId], references: [id], onDelete: Cascade)
+  recipientDeviceId  String       @db.Uuid
+  recipientDevice    Device       @relation("RecipientDeviceMessages", fields: [recipientDeviceId], references: [id], onDelete: Cascade)
+
+  messageType        MessageType  @default(TEXT)
+  encryptedPayload   String       // Base64 AES-GCM ciphertext
+  iv                 String       // Base64 96-bit IV
+  authTag            String       // Base64 128-bit authentication tag
+  signature          String       // Base64 ECDSA signature by sender device
+  ephemeralPublicKey String       // Base64 SPKI ECDH P-256 public key
+  keyVersion         Int          @default(1)
+
+  viewLimit          Int          @default(0) // 0 = unlimited, 1 = view-once, 2 = view-twice
+  viewCount          Int          @default(0)
+  isDisappearing     Boolean      @default(false)
+  expiresAt          DateTime?
+  isExpired          Boolean      @default(false)
+
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  attachment         EncryptedAttachment?
+  views              MessageView[]
+
+  @@index([conversationId, createdAt])
+  @@index([recipientId, isExpired])
+  @@index([expiresAt, isExpired])
+}
+
+model MessageView {
+  id        String           @id @default(uuid()) @db.Uuid
+  messageId String           @db.Uuid
+  message   EncryptedMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  userId    String           @db.Uuid
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceId  String           @db.Uuid
+  device    Device           @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  viewedAt  DateTime         @default(now())
+
+  @@unique([messageId, userId, deviceId])
+  @@index([messageId])
+}
+
+model EncryptedAttachment {
+  id             String           @id @default(uuid()) @db.Uuid
+  messageId      String?          @unique @db.Uuid
+  message        EncryptedMessage? @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  storageKey     String           @unique
+  originalName   String
+  mimeType       String
+  sizeBytes      Int
+  sha256Checksum String           // SHA-256 hex checksum of ciphertext blob
+  createdAt      DateTime         @default(now())
+
+  @@index([storageKey])
+}
+
+model SecurityAuditLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String?  @db.Uuid
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  eventType String
+  ipAddress String?
+  userAgent String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId, eventType])
+  @@index([createdAt])
+}

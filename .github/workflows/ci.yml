@@ -1,0 +1,62 @@
+name: CipherChat CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-and-build:
+    name: Lint, Test, and Build
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: cipherchat
+          POSTGRES_PASSWORD: cipherchat
+          POSTGRES_DB: cipherchat
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "npm"
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client & Migrate DB
+        run: |
+          npx prisma generate
+          npx prisma db push
+        env:
+          DATABASE_URL: "postgresql://cipherchat:cipherchat@localhost:5432/cipherchat?schema=public"
+
+      - name: Run Cryptographic & Shared Tests
+        run: npm run test --workspace=@cipherchat/crypto
+
+      - name: Run Backend Server Tests
+        run: npm run test --workspace=@cipherchat/server
+        env:
+          DATABASE_URL: "postgresql://cipherchat:cipherchat@localhost:5432/cipherchat?schema=public"
+          JWT_ACCESS_SECRET: "test-jwt-access-secret-32-chars-minimum-key"
+          JWT_REFRESH_SECRET: "test-jwt-refresh-secret-32-chars-minimum-key"
+          COOKIE_SECRET: "test-cookie-secret-32-chars-minimum-key"
+          NODE_ENV: "test"
+
+      - name: Build Packages and Applications
+        run: npm run build
