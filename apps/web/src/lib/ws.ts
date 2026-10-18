@@ -13,6 +13,23 @@ class WebSocketClient {
   private isConnecting = false;
   private reconnectAttempts = 0;
 
+  private getWsUrl(): string {
+    if (process.env.NEXT_PUBLIC_WS_URL) {
+      return process.env.NEXT_PUBLIC_WS_URL;
+    }
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (apiUrl) {
+      const trimmed = apiUrl.replace(/\/+$/, "");
+      const wsProtocol = trimmed.startsWith("https://") ? "wss://" : "ws://";
+      return trimmed.replace(/^https?:\/\//, wsProtocol) + "/ws";
+    }
+    if (typeof window !== "undefined" && window.location) {
+      const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+      return `${proto}//${window.location.host}/ws`;
+    }
+    return "ws://localhost:4000/ws";
+  }
+
   public connect(token: string, deviceId: string) {
     this.token = token;
     this.deviceId = deviceId;
@@ -22,7 +39,7 @@ class WebSocketClient {
     }
 
     this.isConnecting = true;
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:4000/ws";
+    const wsUrl = this.getWsUrl();
 
     try {
       this.socket = new WebSocket(wsUrl);

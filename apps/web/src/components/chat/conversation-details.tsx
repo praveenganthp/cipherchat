@@ -28,6 +28,7 @@ interface ConversationDetailsProps {
   onVerifyKeys: () => void;
   onInvite: () => void;
   onClearLocalCache?: () => void;
+  className?: string;
 }
 
 export function ConversationDetails({
@@ -37,6 +38,7 @@ export function ConversationDetails({
   onVerifyKeys,
   onInvite,
   onClearLocalCache,
+  className,
 }: ConversationDetailsProps) {
   const [copiedId, setCopiedId] = React.useState(false);
   const [clearedNotice, setClearedNotice] = React.useState(false);
@@ -61,7 +63,11 @@ export function ConversationDetails({
   };
 
   return (
-    <aside className="w-80 lg:w-88 xl:w-96 border-l border-border/80 bg-card/60 flex flex-col shrink-0 overflow-y-auto">
+    <aside
+      className={`w-full xl:w-88 2xl:w-96 border-l border-border/80 bg-card/95 xl:bg-card/60 flex flex-col shrink-0 overflow-y-auto h-full ${
+        className || ""
+      }`}
+    >
       {/* Header */}
       <div className="h-14 border-b border-border/60 px-4 flex items-center justify-between shrink-0">
         <div className="flex items-center space-x-2">

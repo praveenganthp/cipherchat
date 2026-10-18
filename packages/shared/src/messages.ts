@@ -67,6 +67,8 @@ export interface EncryptedMessageRecord {
   isDisappearing: boolean;
   expiresAt: string | null;
   createdAt: string;
+  isRead?: boolean;
+  isDelivered?: boolean;
   senderIdentityPublicKey?: string;
   senderUsername?: string;
   attachment?: {

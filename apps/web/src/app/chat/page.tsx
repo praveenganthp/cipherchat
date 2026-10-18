@@ -82,12 +82,16 @@ export default function ChatDashboardPage() {
   const [isInviteOpen, setIsInviteOpen] = React.useState(false);
 
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
+  const peerTypingTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   // Auto-open 3rd panel on desktop screens
   React.useEffect(() => {
     if (typeof window !== "undefined" && window.innerWidth >= 1280) {
       setIsDetailsOpen(true);
     }
+    return () => {
+      if (peerTypingTimeoutRef.current) clearTimeout(peerTypingTimeoutRef.current);
+    };
   }, []);
 
   // 1. Fetch conversations
@@ -126,7 +130,7 @@ export default function ChatDashboardPage() {
   const activeConversation = conversations.find((c) => c.id === selectedConvId);
 
   // 2. Fetch messages for active conversation
-  const fetchMessages = React.useCallback(async (convId: string) => {
+  const fetchMessages = React.useCallback(async (convId: string, showLoading = true) => {
     if (demoMode) {
       if (convId === "demo-conv-bob-001") {
         setMessages(DEMO_MESSAGES_BOB);
@@ -137,7 +141,7 @@ export default function ChatDashboardPage() {
       return;
     }
 
-    setIsLoadingMessages(true);
+    if (showLoading) setIsLoadingMessages(true);
     try {
       const res = await apiFetch<{ messages: EncryptedMessageRecord[] }>(
         `/api/conversations/${convId}/messages`
@@ -196,7 +200,7 @@ export default function ChatDashboardPage() {
     } catch {
       // Ignore
     } finally {
-      setIsLoadingMessages(false);
+      if (showLoading) setIsLoadingMessages(false);
     }
   }, [demoMode]);
 
@@ -205,9 +209,20 @@ export default function ChatDashboardPage() {
       fetchMessages(selectedConvId);
       if (!demoMode) {
         wsClient.subscribeConversation(selectedConvId);
+        // Mark conversation read on server so sender gets double green tick
+        apiFetch(`/api/conversations/${selectedConvId}/read`, { method: "POST" }).catch(() => {});
       }
     }
   }, [selectedConvId, fetchMessages, demoMode]);
+
+  // Resilient fallback sync: auto-poll every 3.5s so mobile browsers never miss a message if WS sleeps
+  React.useEffect(() => {
+    if (!selectedConvId || demoMode) return;
+    const interval = setInterval(() => {
+      fetchMessages(selectedConvId, false);
+    }, 3500);
+    return () => clearInterval(interval);
+  }, [selectedConvId, demoMode, fetchMessages]);
 
   // Scroll to bottom when messages change
   React.useEffect(() => {
@@ -248,6 +263,10 @@ export default function ChatDashboardPage() {
               createdAt: event.createdAt,
             };
 
+            // Clear typing indication since new message arrived from sender
+            setIsTypingPeer(null);
+            if (peerTypingTimeoutRef.current) clearTimeout(peerTypingTimeoutRef.current);
+
             setMessages((prev) => {
               if (prev.some((m) => m.id === newRecord.id)) return prev;
               const next = [...prev, newRecord];
@@ -278,6 +297,7 @@ export default function ChatDashboardPage() {
 
             // If recipient is currently active, mark as read
             wsClient.markRead(event.conversationId, event.messageId);
+            apiFetch(`/api/conversations/${event.conversationId}/read`, { method: "POST" }).catch(() => {});
           }
           fetchConversations();
           break;
@@ -285,7 +305,30 @@ export default function ChatDashboardPage() {
 
         case "TYPING_STATUS": {
           if (event.conversationId === selectedConvId) {
-            setIsTypingPeer(event.isTyping ? `${event.username} is typing...` : null);
+            if (event.isTyping) {
+              setIsTypingPeer(`${event.username} is typing...`);
+              if (peerTypingTimeoutRef.current) clearTimeout(peerTypingTimeoutRef.current);
+              peerTypingTimeoutRef.current = setTimeout(() => {
+                setIsTypingPeer(null);
+              }, 3500); // Auto-clear after 3.5s in case user goes idle or stop packet is missed
+            } else {
+              if (peerTypingTimeoutRef.current) clearTimeout(peerTypingTimeoutRef.current);
+              setIsTypingPeer(null);
+            }
+          }
+          break;
+        }
+
+        case "READ_RECEIPT": {
+          if (event.conversationId === selectedConvId) {
+            setMessages((prev) =>
+              prev.map((m) => {
+                if (m.senderId === user?.id) {
+                  return { ...m, isRead: true, isDelivered: true };
+                }
+                return m;
+              })
+            );
           }
           break;
         }
@@ -294,7 +337,7 @@ export default function ChatDashboardPage() {
           setMessages((prev) =>
             prev.map((m) =>
               m.id === event.messageId
-                ? { ...m, viewCount: event.viewCount, isExpired: event.isExpired }
+                ? { ...m, viewCount: event.viewCount, isExpired: event.isExpired, isRead: true }
                 : m
             )
           );
@@ -332,7 +375,7 @@ export default function ChatDashboardPage() {
     return () => {
       unsubscribe();
     };
-  }, [demoMode, selectedConvId, fetchConversations]);
+  }, [demoMode, selectedConvId, fetchConversations, user?.id]);
 
   // 4. Handle sending messages
   const handleSendMessage = async (params: {
@@ -697,9 +740,9 @@ export default function ChatDashboardPage() {
       >
         {activeConversation ? (
           <>
-            {/* Conversation Header */}
-            <header className="h-14 border-b border-border/80 bg-card/70 backdrop-blur-md px-3 sm:px-4 flex items-center justify-between shrink-0">
-              <div className="flex items-center space-x-2 sm:space-x-3 truncate mr-2">
+            {/* Conversation Header - WhatsApp Style Sticky Header */}
+            <header className="sticky top-0 z-20 h-16 border-b border-border/80 bg-card/95 backdrop-blur-md px-3 sm:px-4 flex items-center justify-between shrink-0 shadow-xs">
+              <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 mr-2">
                 {/* Mobile Back Button */}
                 <Button
                   variant="ghost"
@@ -711,32 +754,70 @@ export default function ChatDashboardPage() {
                   <ArrowLeft className="h-5 w-5" />
                 </Button>
 
-                <div className="flex items-center space-x-1.5 sm:space-x-2 truncate">
-                  <h3 className="font-semibold text-sm text-foreground truncate max-w-[130px] xs:max-w-[200px] sm:max-w-none">
-                    {activeConversation.type === "GROUP"
-                      ? activeConversation.title
-                      : activeConversation.otherMember?.displayName || activeConversation.otherMember?.username}
-                  </h3>
-                  <Badge variant="default" className="text-[10px] py-0 px-1.5 shrink-0 hidden xs:inline-flex">
-                    <Lock className="h-3 w-3 mr-1 text-emerald-400" />
-                    E2EE
-                  </Badge>
+                {/* Avatar with presence status indicator */}
+                <div className="relative shrink-0">
+                  <div className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center border border-border/80 overflow-hidden">
+                    {activeConversation.type === "GROUP" ? (
+                      <Users className="h-4.5 w-4.5 text-emerald-400" />
+                    ) : activeConversation.otherMember?.avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={activeConversation.otherMember.avatarUrl}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <User className="h-4.5 w-4.5 text-muted-foreground" />
+                    )}
+                  </div>
+                  {activeConversation.type === "DIRECT" && activeConversation.otherMember?.isOnline && (
+                    <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-card" />
+                  )}
                 </div>
 
-                {activeConversation.disappearingMode !== "OFF" && (
-                  <Badge variant="warning" className="text-[10px] py-0 px-1.5 hidden md:inline-flex shrink-0">
-                    <Clock className="h-3 w-3 mr-1" />
-                    {activeConversation.disappearingMode === "VIEW_ONCE"
-                      ? "1-View"
-                      : activeConversation.disappearingMode === "VIEW_TWICE"
-                      ? "2-View"
-                      : "24h TTL"}
-                  </Badge>
-                )}
+                {/* Title & Live Status (Typing, Online, Member count) */}
+                <div className="flex flex-col min-w-0">
+                  <div className="flex items-center space-x-1.5 truncate">
+                    <h3 className="font-semibold text-sm text-foreground truncate max-w-[130px] xs:max-w-[180px] sm:max-w-none">
+                      {activeConversation.type === "GROUP"
+                        ? activeConversation.title
+                        : activeConversation.otherMember?.displayName || activeConversation.otherMember?.username}
+                    </h3>
+                    <Badge variant="default" className="text-[9px] py-0 px-1 shrink-0 hidden xs:inline-flex">
+                      <Lock className="h-2.5 w-2.5 mr-0.5 text-emerald-400" />
+                      E2EE
+                    </Badge>
+                    {activeConversation.disappearingMode !== "OFF" && (
+                      <Badge variant="warning" className="text-[9px] py-0 px-1 hidden md:inline-flex shrink-0">
+                        <Clock className="h-2.5 w-2.5 mr-0.5" />
+                        {activeConversation.disappearingMode === "VIEW_ONCE"
+                          ? "1-View"
+                          : activeConversation.disappearingMode === "VIEW_TWICE"
+                          ? "2-View"
+                          : "24h TTL"}
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="text-[11px] leading-tight truncate">
+                    {isTypingPeer ? (
+                      <span className="text-emerald-400 font-medium animate-pulse">
+                        typing...
+                      </span>
+                    ) : activeConversation.type === "GROUP" ? (
+                      <span className="text-muted-foreground">
+                        {activeConversation.memberCount} members
+                      </span>
+                    ) : activeConversation.otherMember?.isOnline ? (
+                      <span className="text-emerald-400/90 font-medium">online</span>
+                    ) : (
+                      <span className="text-muted-foreground/80">offline</span>
+                    )}
+                  </div>
+                </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center space-x-1.5 sm:space-x-2 shrink-0">
+              <div className="flex items-center space-x-1 sm:space-x-2 shrink-0">
                 {activeConversation.type === "GROUP" ? (
                   <Button
                     variant="outline"
@@ -887,7 +968,7 @@ export default function ChatDashboardPage() {
                       <p className="leading-relaxed break-words">{plaintext}</p>
 
                       {/* Message Metadata Footer */}
-                      <div className="flex items-center justify-end space-x-1.5 mt-1 text-[10px] text-muted-foreground">
+                      <div className="flex items-center justify-end space-x-1 mt-1 text-[10px] text-muted-foreground">
                         {m.isDisappearing && (
                           <span title="Disappearing message (24h TTL)">
                             <Clock className="h-3 w-3 inline mr-0.5 text-amber-400" />
@@ -895,11 +976,22 @@ export default function ChatDashboardPage() {
                         )}
                         <span className="font-mono">{formatDate(m.createdAt)}</span>
                         {isMe && (
-                          <span>
-                            {m.viewCount > 0 ? (
-                              <CheckCheck className="h-3.5 w-3.5 inline text-emerald-400" />
+                          <span
+                            className="inline-flex items-center ml-0.5"
+                            title={
+                              m.isRead || m.viewCount > 0
+                                ? "Read by recipient"
+                                : m.isDelivered
+                                ? "Delivered to recipient"
+                                : "Sent to server"
+                            }
+                          >
+                            {m.isRead || m.viewCount > 0 ? (
+                              <CheckCheck className="h-3.5 w-3.5 text-emerald-400" />
+                            ) : m.isDelivered ? (
+                              <CheckCheck className="h-3.5 w-3.5 text-muted-foreground/70" />
                             ) : (
-                              <Check className="h-3.5 w-3.5 inline text-muted-foreground" />
+                              <Check className="h-3.5 w-3.5 text-muted-foreground/60" />
                             )}
                           </span>
                         )}
@@ -947,14 +1039,38 @@ export default function ChatDashboardPage() {
 
       {/* PANEL 3: Collapsible Right Panel / Security & Details Inspector */}
       {activeConversation && isDetailsOpen && (
-        <ConversationDetails
-          conversation={activeConversation}
-          user={user}
-          onClose={() => setIsDetailsOpen(false)}
-          onVerifyKeys={handleOpenSafety}
-          onInvite={() => setIsInviteOpen(true)}
-          onClearLocalCache={handleClearLocalCache}
-        />
+        <>
+          {/* Mobile/Tablet Backdrop & Raised Floating Slide-Over Drawer */}
+          <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-xs xl:hidden animate-in fade-in duration-200">
+            <div
+              className="fixed inset-0"
+              onClick={() => setIsDetailsOpen(false)}
+              aria-hidden="true"
+            />
+            <div className="relative z-10 w-full max-w-sm sm:max-w-md h-full shadow-2xl bg-card border-l border-border animate-in slide-in-from-right duration-250 flex flex-col">
+              <ConversationDetails
+                conversation={activeConversation}
+                user={user}
+                onClose={() => setIsDetailsOpen(false)}
+                onVerifyKeys={handleOpenSafety}
+                onInvite={() => setIsInviteOpen(true)}
+                onClearLocalCache={handleClearLocalCache}
+              />
+            </div>
+          </div>
+
+          {/* Desktop Inline Docked Column */}
+          <div className="hidden xl:flex shrink-0">
+            <ConversationDetails
+              conversation={activeConversation}
+              user={user}
+              onClose={() => setIsDetailsOpen(false)}
+              onVerifyKeys={handleOpenSafety}
+              onInvite={() => setIsInviteOpen(true)}
+              onClearLocalCache={handleClearLocalCache}
+            />
+          </div>
+        </>
       )}
 
       {/* Modals */}

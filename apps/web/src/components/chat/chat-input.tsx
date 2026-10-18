@@ -37,17 +37,32 @@ export function ChatInput({ onSendMessage, onTyping, disabled = false }: ChatInp
   };
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setContent(e.target.value);
+    const val = e.target.value;
+    setContent(val);
     adjustHeight();
 
     if (onTyping) {
-      onTyping(true);
-      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-      typingTimeoutRef.current = setTimeout(() => {
+      // Only broadcast typing if at least 2 characters have been entered
+      if (val.trim().length >= 2) {
+        onTyping(true);
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = setTimeout(() => {
+          onTyping(false);
+        }, 2500); // Auto-stop indicating after 2.5s of inactivity
+      } else {
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
         onTyping(false);
-      }, 2000);
+      }
     }
   };
+
+  // Clean up typing indicator on unmount
+  React.useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      if (onTyping) onTyping(false);
+    };
+  }, [onTyping]);
 
   // Auto-focus textarea when conversation is active
   React.useEffect(() => {
@@ -60,6 +75,15 @@ export function ChatInput({ onSendMessage, onTyping, disabled = false }: ChatInp
     if (e) e.preventDefault();
     const trimmed = content.trim();
     if ((!trimmed && !selectedFile) || isSending || disabled) return;
+
+    // Immediately stop typing indicator
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
+    if (onTyping) {
+      onTyping(false);
+    }
 
     try {
       setIsSending(true);
@@ -77,12 +101,12 @@ export function ChatInput({ onSendMessage, onTyping, disabled = false }: ChatInp
         textareaRef.current.style.height = "auto";
         textareaRef.current.focus();
       }
-      if (onTyping) {
-        onTyping(false);
-      }
     } finally {
       setIsSending(false);
-      // Keep cursor automatically focused in the message box
+      // Synchronously and smoothly keep mobile virtual keyboard open
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+      }
       requestAnimationFrame(() => {
         textareaRef.current?.focus();
       });
@@ -225,6 +249,10 @@ export function ChatInput({ onSendMessage, onTyping, disabled = false }: ChatInp
           type="submit"
           variant="primary"
           size="icon"
+          onPointerDown={(e) => {
+            // Prevent button click from stealing focus away from textarea on mobile/desktop
+            e.preventDefault();
+          }}
           isLoading={isSending}
           disabled={disabled || (!content.trim() && !selectedFile)}
           aria-label="Send message"

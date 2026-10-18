@@ -314,6 +314,22 @@ export const conversationRoutes: FastifyPluginAsync = async (fastify) => {
         : {}),
     });
 
+    // Query recipient/other members' lastReadAt to calculate read status
+    const otherMembers = await prisma.conversationMember.findMany({
+      where: {
+        conversationId: id,
+        userId: { not: user.userId },
+      },
+      select: {
+        lastReadAt: true,
+      },
+    });
+
+    const maxOtherLastReadAt = otherMembers.reduce(
+      (max, m) => (!max || m.lastReadAt > max ? m.lastReadAt : max),
+      null as Date | null
+    );
+
     // Return messages in chronological order (oldest to newest)
     const chronologicalMessages = [...messages].reverse();
 
@@ -340,6 +356,8 @@ export const conversationRoutes: FastifyPluginAsync = async (fastify) => {
         isExpired: msg.isExpired,
         isDisappearing: msg.isDisappearing,
         expiresAt: msg.expiresAt?.toISOString() || null,
+        isRead: msg.views.length > 0 || msg.viewCount > 0 || (maxOtherLastReadAt !== null && maxOtherLastReadAt >= msg.createdAt),
+        isDelivered: true,
         createdAt: msg.createdAt.toISOString(),
         attachment: msg.attachment
           ? {
@@ -473,5 +491,45 @@ export const conversationRoutes: FastifyPluginAsync = async (fastify) => {
       messageIds: createdMessages.map((m) => m.id),
       conversationId: id,
     });
+  });
+
+  // REST endpoint to mark conversation as read
+  fastify.post("/:id/read", { preHandler: requireAuth }, async (request, reply) => {
+    const user = request.user!;
+    const { id } = request.params as { id: string };
+
+    const member = await prisma.conversationMember.findUnique({
+      where: {
+        conversationId_userId: {
+          conversationId: id,
+          userId: user.userId,
+        },
+      },
+    });
+
+    if (!member || member.leftAt !== null) {
+      return reply.status(403).send({ statusCode: 403, message: "Forbidden" });
+    }
+
+    const now = new Date();
+    await prisma.conversationMember.update({
+      where: { id: member.id },
+      data: { lastReadAt: now },
+    });
+
+    // Broadcast read receipt to other participants via WebSocket
+    wsConnectionManager.broadcastToConversation(
+      id,
+      {
+        type: "READ_RECEIPT",
+        conversationId: id,
+        userId: user.userId,
+        messageId: "all",
+        readAt: now.toISOString(),
+      },
+      user.deviceId
+    );
+
+    return reply.send({ success: true, lastReadAt: now.toISOString() });
   });
 };
