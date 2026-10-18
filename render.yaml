@@ -10,7 +10,7 @@ services:
     runtime: node
     plan: free
     branch: main
-    buildCommand: npm install && npx prisma db push && npm run build:server
+    buildCommand: npm install --include=dev && npx prisma db push && npm run build:server
     startCommand: npm run start:server
     envVars:
       - key: NODE_ENV
