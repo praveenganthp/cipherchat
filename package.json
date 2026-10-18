@@ -12,6 +12,8 @@
     "dev:server": "npm run dev --workspace=@cipherchat/server",
     "dev:web": "npm run dev --workspace=@cipherchat/web",
     "build": "npm run build --workspaces --if-present",
+    "build:server": "npx prisma generate && npm run build --workspace=@cipherchat/shared && npm run build --workspace=@cipherchat/crypto && npm run build --workspace=@cipherchat/server",
+    "start:server": "npm run start --workspace=@cipherchat/server",
     "test": "npm run test --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "db:generate": "npx prisma generate",
