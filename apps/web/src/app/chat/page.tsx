@@ -16,6 +16,7 @@ import {
   MessageSquare,
   Sparkles,
   Link2,
+  ArrowLeft,
 } from "lucide-react";
 import { useAuthStore } from "@/lib/auth-store";
 import { apiFetch } from "@/lib/api";
@@ -71,7 +72,9 @@ export default function ChatDashboardPage() {
     if (demoMode) {
       setConversations(DEMO_CONVERSATIONS);
       if (!selectedConvId && DEMO_CONVERSATIONS.length > 0) {
-        setSelectedConvId(DEMO_CONVERSATIONS[0].id);
+        if (typeof window !== "undefined" && window.innerWidth >= 768) {
+          setSelectedConvId(DEMO_CONVERSATIONS[0].id);
+        }
       }
       return;
     }
@@ -80,7 +83,9 @@ export default function ChatDashboardPage() {
       const res = await apiFetch<{ conversations: ConversationSummary[] }>("/api/conversations");
       setConversations(res.conversations);
       if (!selectedConvId && res.conversations.length > 0) {
-        setSelectedConvId(res.conversations[0].id);
+        if (typeof window !== "undefined" && window.innerWidth >= 768) {
+          setSelectedConvId(res.conversations[0].id);
+        }
       }
     } catch {
       // Not logged in or backend unavailable
@@ -422,7 +427,13 @@ export default function ChatDashboardPage() {
   return (
     <div className="flex-1 flex overflow-hidden">
       {/* Sidebar: Conversation List */}
-      <aside className="w-80 sm:w-96 border-r border-border bg-card/40 flex flex-col shrink-0">
+      <aside
+        className={`border-r border-border bg-card/40 flex-col shrink-0 ${
+          selectedConvId
+            ? "hidden md:flex w-full md:w-80 lg:w-96"
+            : "flex w-full md:w-80 lg:w-96"
+        }`}
+      >
         <div className="p-3 border-b border-border/60 space-y-2.5">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-bold text-foreground">Encrypted Chats</h2>
@@ -535,57 +546,72 @@ export default function ChatDashboardPage() {
       </aside>
 
       {/* Main Conversation Stream */}
-      <section className="flex-1 flex flex-col bg-navy-950/40 min-w-0">
+      <section
+        className={`flex-1 flex-col bg-navy-950/40 min-w-0 ${
+          selectedConvId ? "flex w-full" : "hidden md:flex"
+        }`}
+      >
         {activeConversation ? (
           <>
             {/* Conversation Header */}
-            <header className="h-14 border-b border-border bg-card/50 backdrop-blur-md px-4 flex items-center justify-between">
-              <div className="flex items-center space-x-3 truncate">
-                <div className="flex items-center space-x-2">
-                  <h3 className="font-semibold text-sm text-foreground truncate">
+            <header className="h-14 border-b border-border bg-card/50 backdrop-blur-md px-3 sm:px-4 flex items-center justify-between shrink-0">
+              <div className="flex items-center space-x-2 sm:space-x-3 truncate mr-2">
+                {/* Mobile Back Button */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setSelectedConvId(null)}
+                  className="md:hidden h-8 w-8 -ml-1 text-muted-foreground hover:text-foreground shrink-0"
+                  aria-label="Back to conversations list"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+
+                <div className="flex items-center space-x-1.5 sm:space-x-2 truncate">
+                  <h3 className="font-semibold text-sm text-foreground truncate max-w-[130px] xs:max-w-[200px] sm:max-w-none">
                     {activeConversation.type === "GROUP"
                       ? activeConversation.title
                       : activeConversation.otherMember?.displayName || activeConversation.otherMember?.username}
                   </h3>
-                  <Badge variant="default" className="text-[10px] py-0 px-1.5">
+                  <Badge variant="default" className="text-[10px] py-0 px-1.5 shrink-0 hidden xs:inline-flex">
                     <Lock className="h-3 w-3 mr-1 text-emerald-400" />
-                    E2EE Verified
+                    E2EE
                   </Badge>
                 </div>
 
                 {activeConversation.disappearingMode !== "OFF" && (
-                  <Badge variant="warning" className="text-[10px] py-0 px-1.5 hidden sm:inline-flex">
+                  <Badge variant="warning" className="text-[10px] py-0 px-1.5 hidden md:inline-flex shrink-0">
                     <Clock className="h-3 w-3 mr-1" />
                     {activeConversation.disappearingMode === "VIEW_ONCE"
-                      ? "View Once"
+                      ? "1-View"
                       : activeConversation.disappearingMode === "VIEW_TWICE"
-                      ? "View Twice"
+                      ? "2-View"
                       : "24h TTL"}
                   </Badge>
                 )}
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center space-x-2 shrink-0">
+              <div className="flex items-center space-x-1.5 sm:space-x-2 shrink-0">
                 {activeConversation.type === "GROUP" ? (
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setIsInviteOpen(true)}
-                    className="text-xs"
+                    className="text-xs h-8 px-2 sm:px-3"
                   >
-                    <Link2 className="h-3.5 w-3.5 mr-1 text-primary" />
-                    <span>Invite</span>
+                    <Link2 className="h-3.5 w-3.5 sm:mr-1 text-primary" />
+                    <span className="hidden sm:inline">Invite</span>
                   </Button>
                 ) : (
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={handleOpenSafety}
-                    className="text-xs"
+                    className="text-xs h-8 px-2 sm:px-3"
                   >
-                    <Shield className="h-3.5 w-3.5 mr-1 text-primary" />
-                    <span>Verify Keys</span>
+                    <Shield className="h-3.5 w-3.5 sm:mr-1 text-primary" />
+                    <span className="hidden sm:inline">Verify Keys</span>
                   </Button>
                 )}
               </div>

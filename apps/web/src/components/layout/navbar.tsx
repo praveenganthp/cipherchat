@@ -17,24 +17,24 @@ export function Navbar() {
   return (
     <>
       <header className="sticky top-0 z-40 w-full border-b border-border bg-card/80 backdrop-blur-md">
-        <div className="container mx-auto flex h-14 items-center justify-between px-4">
+        <div className="container mx-auto flex h-14 items-center justify-between px-2.5 sm:px-4">
           {/* Brand Logo */}
-          <Link href="/" className="flex items-center space-x-2.5 group">
+          <Link href="/" className="flex items-center space-x-2 group shrink-0">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/20 text-primary border border-primary/30 group-hover:scale-105 transition-transform">
               <Shield className="h-4 w-4" />
             </div>
             <div className="flex items-center space-x-1.5">
-              <span className="font-bold text-base tracking-tight text-foreground">
+              <span className="font-bold text-sm sm:text-base tracking-tight text-foreground">
                 CipherChat
               </span>
-              <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-primary/40 text-primary">
+              <Badge variant="outline" className="text-[9px] sm:text-[10px] py-0 px-1 border-primary/40 text-primary hidden xs:inline-flex">
                 E2EE
               </Badge>
             </div>
           </Link>
 
           {/* Navigation Items */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-1.5 sm:space-x-3">
             <Link
               href="/docs/security"
               className="hidden sm:flex items-center space-x-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-md hover:bg-secondary/60"
@@ -55,18 +55,19 @@ export function Navbar() {
             {/* Demo Mode Toggle */}
             <button
               onClick={() => setDemoMode(!demoMode)}
-              className={`flex items-center space-x-1 text-xs px-2.5 py-1 rounded-full border transition-all ${
+              className={`flex items-center space-x-1 text-xs px-2 sm:px-2.5 py-1 rounded-full border transition-all shrink-0 ${
                 demoMode
                   ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
                   : "bg-secondary/60 text-muted-foreground border-border hover:text-foreground"
               }`}
             >
               <Sparkles className="h-3 w-3" />
-              <span>{demoMode ? "Demo Mode (ON)" : "Demo Mode"}</span>
+              <span className="hidden sm:inline">{demoMode ? "Demo Mode (ON)" : "Demo Mode"}</span>
+              <span className="sm:hidden text-[11px]">{demoMode ? "Demo (ON)" : "Demo"}</span>
             </button>
 
             {user ? (
-              <div className="flex items-center space-x-2 border-l border-border/60 pl-3">
+              <div className="flex items-center space-x-1 sm:space-x-2 border-l border-border/60 pl-2 sm:pl-3 shrink-0">
                 <button
                   onClick={() => setIsDevicesOpen(true)}
                   className="hidden sm:flex items-center space-x-1 text-xs text-muted-foreground hover:text-foreground bg-secondary/40 px-2 py-1 rounded-md border border-border/50"
@@ -78,17 +79,17 @@ export function Navbar() {
 
                 <button
                   onClick={() => setIsSettingsOpen(true)}
-                  className="flex items-center space-x-1.5 text-xs font-medium text-foreground bg-secondary hover:bg-secondary/80 px-2.5 py-1 rounded-md border border-border"
+                  className="flex items-center space-x-1 text-xs font-medium text-foreground bg-secondary hover:bg-secondary/80 px-2 sm:px-2.5 py-1 rounded-md border border-border"
                 >
                   <User className="h-3.5 w-3.5" />
-                  <span>{user.username}</span>
+                  <span className="max-w-[75px] sm:max-w-none truncate">{user.username}</span>
                 </button>
 
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={logout}
-                  className="text-muted-foreground hover:text-destructive h-8 w-8"
+                  className="text-muted-foreground hover:text-destructive h-8 w-8 shrink-0"
                   title="Sign out"
                 >
                   <LogOut className="h-4 w-4" />

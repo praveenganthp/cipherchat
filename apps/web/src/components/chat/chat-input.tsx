@@ -101,7 +101,7 @@ export function ChatInput({ onSendMessage, onTyping, disabled = false }: ChatInp
   };
 
   return (
-    <div className="relative border-t border-border bg-card/60 backdrop-blur-md p-3">
+    <div className="relative z-30 border-t border-border bg-card/95 backdrop-blur-md p-2.5 sm:p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))]">
       {/* File Attachment preview pill */}
       {selectedFile && (
         <div className="mb-2 flex items-center justify-between rounded-lg border border-border/80 bg-secondary/80 px-3 py-1.5 text-xs">
@@ -123,13 +123,13 @@ export function ChatInput({ onSendMessage, onTyping, disabled = false }: ChatInp
       )}
 
       {/* Ephemeral & View Limit Controls */}
-      <div className="mb-2 flex items-center justify-between text-xs">
-        <div className="flex items-center space-x-2">
+      <div className="mb-2 flex items-center justify-between gap-2 overflow-x-auto no-scrollbar text-xs">
+        <div className="flex items-center space-x-1.5 shrink-0">
           {/* View limit toggle: Normal / 1 View / 2 Views */}
           <button
             type="button"
             onClick={() => setViewLimit((prev) => (prev === 0 ? 1 : prev === 1 ? 2 : 0))}
-            className={`flex items-center space-x-1 rounded-md px-2 py-1 transition-colors border ${
+            className={`flex items-center space-x-1 rounded-md px-2 py-1 text-[11px] sm:text-xs transition-colors border ${
               viewLimit === 1
                 ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
                 : viewLimit === 2
@@ -140,7 +140,7 @@ export function ChatInput({ onSendMessage, onTyping, disabled = false }: ChatInp
           >
             <Eye className="h-3.5 w-3.5" />
             <span>
-              {viewLimit === 0 ? "Unlimited views" : viewLimit === 1 ? "View once" : "View twice"}
+              {viewLimit === 0 ? "Unlimited views" : viewLimit === 1 ? "1 View" : "2 Views"}
             </span>
           </button>
 
@@ -148,7 +148,7 @@ export function ChatInput({ onSendMessage, onTyping, disabled = false }: ChatInp
           <button
             type="button"
             onClick={() => setIsDisappearing((prev) => !prev)}
-            className={`flex items-center space-x-1 rounded-md px-2 py-1 transition-colors border ${
+            className={`flex items-center space-x-1 rounded-md px-2 py-1 text-[11px] sm:text-xs transition-colors border ${
               isDisappearing
                 ? "bg-cipher-violet/20 text-cipher-violet border-cipher-violet/40"
                 : "bg-secondary text-muted-foreground border-border hover:text-foreground"
@@ -160,14 +160,14 @@ export function ChatInput({ onSendMessage, onTyping, disabled = false }: ChatInp
           </button>
         </div>
 
-        <div className="flex items-center space-x-1 text-muted-foreground">
+        <div className="hidden xs:flex items-center space-x-1 text-muted-foreground shrink-0">
           <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
-          <span className="text-[11px]">E2EE AES-256-GCM</span>
+          <span className="text-[10px] sm:text-[11px]">E2EE AES-256</span>
         </div>
       </div>
 
       {/* Input form */}
-      <form onSubmit={handleSubmit} className="flex items-end space-x-2">
+      <form onSubmit={handleSubmit} className="flex items-end space-x-1.5 sm:space-x-2">
         <input
           type="file"
           ref={fileInputRef}
@@ -182,7 +182,7 @@ export function ChatInput({ onSendMessage, onTyping, disabled = false }: ChatInp
           size="icon"
           onClick={() => fileInputRef.current?.click()}
           disabled={disabled || isSending}
-          className="shrink-0 text-muted-foreground hover:text-foreground"
+          className="h-10 w-10 sm:h-9 sm:w-9 shrink-0 text-muted-foreground hover:text-foreground"
           aria-label="Attach file"
         >
           <Paperclip className="h-5 w-5" />
@@ -202,10 +202,10 @@ export function ChatInput({ onSendMessage, onTyping, disabled = false }: ChatInp
             placeholder={
               disabled
                 ? "Select a conversation to start chatting"
-                : "Type an encrypted message... (Enter to send, Shift+Enter for newline)"
+                : "Type an encrypted message..."
             }
             disabled={disabled || isSending}
-            className="w-full resize-none rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary max-h-[140px]"
+            className="w-full resize-none rounded-lg border border-border bg-card px-3 py-2 text-base sm:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary max-h-[140px]"
           />
         </div>
 
@@ -216,7 +216,7 @@ export function ChatInput({ onSendMessage, onTyping, disabled = false }: ChatInp
           isLoading={isSending}
           disabled={disabled || (!content.trim() && !selectedFile)}
           aria-label="Send message"
-          className="shrink-0"
+          className="h-10 w-10 sm:h-9 sm:w-9 shrink-0"
         >
           <Send className="h-4 w-4" />
         </Button>

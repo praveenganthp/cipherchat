@@ -4,6 +4,8 @@
 
 [build.environment]
   NODE_VERSION = "22"
+  NETLIFY_DRAWER = "false"
+  NETLIFY_FEEDBACK_DISABLED = "true"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
