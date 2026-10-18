@@ -34,11 +34,13 @@ import { ChatInput } from "@/components/chat/chat-input";
 import { SafetyModal } from "@/components/chat/safety-modal";
 import { AttachmentModal } from "@/components/chat/attachment-modal";
 import { CreateRoomModal } from "@/components/chat/create-room-modal";
+import { CreateDmModal } from "@/components/chat/create-dm-modal";
 import { InviteModal } from "@/components/chat/invite-modal";
 import { formatDate } from "@/lib/utils";
 import type {
   ConversationSummary,
   EncryptedMessageRecord,
+  EncryptedEnvelope,
   SafetyFingerprint,
   WsServerMessage,
 } from "@cipherchat/shared";
@@ -57,6 +59,7 @@ export default function ChatDashboardPage() {
   const [isSafetyOpen, setIsSafetyOpen] = React.useState(false);
   const [safetyFingerprint, setSafetyFingerprint] = React.useState<SafetyFingerprint | null>(null);
   const [activeAttachmentMsg, setActiveAttachmentMsg] = React.useState<EncryptedMessageRecord | null>(null);
+  const [isCreateDmOpen, setIsCreateDmOpen] = React.useState(false);
   const [isCreateRoomOpen, setIsCreateRoomOpen] = React.useState(false);
   const [isInviteOpen, setIsInviteOpen] = React.useState(false);
   const [isLoadingMessages, setIsLoadingMessages] = React.useState(false);
@@ -111,15 +114,46 @@ export default function ChatDashboardPage() {
 
       // Decrypt messages locally in browser memory
       for (const msg of res.messages) {
-        if (!plaintextCache[msg.id]) {
+        // 1. Check localStorage first
+        const localCached = typeof window !== "undefined" ? localStorage.getItem(`cc_pt_${msg.id}`) : null;
+        if (localCached) {
+          setPlaintextCache((prev) => ({ ...prev, [msg.id]: localCached }));
+          continue;
+        }
+
+        // 2. Decrypt message using sender device identity public key
+        const senderPubKey = msg.senderIdentityPublicKey;
+        if (senderPubKey) {
           try {
-            // In live mode, decrypt with local crypto manager
-            setPlaintextCache((prev) => ({
-              ...prev,
-              [msg.id]: `[Decrypted ${msg.id.slice(0, 6)}]: ${msg.encryptedPayload.slice(0, 30)}...`,
-            }));
-          } catch {
-            // Ignore decryption failure for other devices
+            const envelope: EncryptedEnvelope = {
+              version: 1,
+              senderDeviceId: msg.senderDeviceId,
+              recipientDeviceId: msg.recipientDeviceId,
+              ephemeralPublicKey: msg.ephemeralPublicKey,
+              ciphertext: msg.encryptedPayload,
+              iv: msg.iv,
+              authTag: msg.authTag,
+              signature: msg.signature,
+              timestamp: new Date(msg.createdAt).getTime(),
+            };
+
+            const decrypted = await cryptoManager.decryptMessage({
+              envelope,
+              senderIdentityPublicKeySpki: senderPubKey,
+            });
+
+            if (decrypted && decrypted.content) {
+              if (typeof window !== "undefined") {
+                localStorage.setItem(`cc_pt_${msg.id}`, decrypted.content);
+              }
+              setPlaintextCache((prev) => ({ ...prev, [msg.id]: decrypted.content }));
+            }
+          } catch (decErr) {
+            console.warn(`Decryption failed for message ${msg.id}:`, decErr);
+            const fallback = typeof window !== "undefined" ? localStorage.getItem(`cc_pt_${msg.id}`) : null;
+            if (fallback) {
+              setPlaintextCache((prev) => ({ ...prev, [msg.id]: fallback }));
+            }
           }
         }
       }
@@ -128,7 +162,7 @@ export default function ChatDashboardPage() {
     } finally {
       setIsLoadingMessages(false);
     }
-  }, [demoMode, plaintextCache]);
+  }, [demoMode]);
 
   React.useEffect(() => {
     if (selectedConvId) {
@@ -152,32 +186,56 @@ export default function ChatDashboardPage() {
       switch (event.type) {
         case "NEW_MESSAGE": {
           if (event.conversationId === selectedConvId) {
-            setMessages((prev) => [
-              {
-                id: event.messageId,
-                conversationId: event.conversationId,
-                senderId: event.senderId,
-                senderDeviceId: event.senderDeviceId,
-                recipientId: event.envelope.recipientDeviceId,
-                recipientDeviceId: event.envelope.recipientDeviceId,
-                messageType: event.messageType,
-                encryptedPayload: event.envelope.ciphertext,
-                iv: event.envelope.iv,
-                authTag: event.envelope.authTag,
-                signature: event.envelope.signature,
-                ephemeralPublicKey: event.envelope.ephemeralPublicKey,
-                keyVersion: 1,
-                viewLimit: event.viewLimit,
-                viewCount: event.viewCount,
-                hasViewed: false,
-                isExpired: false,
-                isDisappearing: event.isDisappearing,
-                expiresAt: event.expiresAt,
-                attachment: event.attachment,
-                createdAt: event.createdAt,
-              },
-              ...prev,
-            ]);
+            const newRecord: EncryptedMessageRecord = {
+              id: event.messageId,
+              conversationId: event.conversationId,
+              senderId: event.senderId,
+              senderDeviceId: event.senderDeviceId,
+              senderUsername: event.senderUsername,
+              senderIdentityPublicKey: event.senderIdentityPublicKey,
+              recipientId: event.envelope.recipientDeviceId,
+              recipientDeviceId: event.envelope.recipientDeviceId,
+              messageType: event.messageType,
+              encryptedPayload: event.envelope.ciphertext,
+              iv: event.envelope.iv,
+              authTag: event.envelope.authTag,
+              signature: event.envelope.signature,
+              ephemeralPublicKey: event.envelope.ephemeralPublicKey,
+              keyVersion: 1,
+              viewLimit: event.viewLimit,
+              viewCount: event.viewCount,
+              hasViewed: false,
+              isExpired: false,
+              isDisappearing: event.isDisappearing,
+              expiresAt: event.expiresAt,
+              attachment: event.attachment,
+              createdAt: event.createdAt,
+            };
+
+            setMessages((prev) => {
+              if (prev.some((m) => m.id === newRecord.id)) return prev;
+              return [...prev, newRecord];
+            });
+
+            // Decrypt immediately if sender public key is present
+            if (event.senderIdentityPublicKey) {
+              cryptoManager
+                .decryptMessage({
+                  envelope: event.envelope,
+                  senderIdentityPublicKeySpki: event.senderIdentityPublicKey,
+                })
+                .then((dec) => {
+                  if (dec?.content) {
+                    if (typeof window !== "undefined") {
+                      localStorage.setItem(`cc_pt_${event.messageId}`, dec.content);
+                    }
+                    setPlaintextCache((prev) => ({ ...prev, [event.messageId]: dec.content }));
+                  }
+                })
+                .catch((err) => {
+                  console.warn("Could not decrypt incoming WS message:", err);
+                });
+            }
 
             // If recipient is currently active, mark as read
             wsClient.markRead(event.conversationId, event.messageId);
@@ -319,18 +377,30 @@ export default function ChatDashboardPage() {
     }
 
     // Dispatch message via REST API
-    await apiFetch(`/api/conversations/${selectedConvId}/messages`, {
-      method: "POST",
-      body: JSON.stringify({
-        envelopes,
-        messageType: params.file ? "ATTACHMENT" : "TEXT",
-        viewLimit: params.viewLimit,
-        isDisappearing: params.isDisappearing,
-        ttlSeconds: params.ttlSeconds,
-      }),
-    });
+    const res = await apiFetch<{ message: string; messageIds: string[] }>(
+      `/api/conversations/${selectedConvId}/messages`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          envelopes,
+          messageType: params.file ? "ATTACHMENT" : "TEXT",
+          viewLimit: params.viewLimit,
+          isDisappearing: params.isDisappearing,
+          ttlSeconds: params.ttlSeconds,
+        }),
+      }
+    );
 
-    fetchMessages(selectedConvId);
+    if (res?.messageIds) {
+      for (const id of res.messageIds) {
+        if (typeof window !== "undefined") {
+          localStorage.setItem(`cc_pt_${id}`, params.content);
+        }
+        setPlaintextCache((prev) => ({ ...prev, [id]: params.content }));
+      }
+    }
+
+    await fetchMessages(selectedConvId);
   };
 
   // 5. Open Safety Fingerprint modal
@@ -356,15 +426,28 @@ export default function ChatDashboardPage() {
         <div className="p-3 border-b border-border/60 space-y-2.5">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-bold text-foreground">Encrypted Chats</h2>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setIsCreateRoomOpen(true)}
-              className="text-xs h-7 px-2"
-            >
-              <Plus className="h-3.5 w-3.5 mr-1" />
-              New Room
-            </Button>
+            <div className="flex items-center space-x-1.5">
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setIsCreateDmOpen(true)}
+                className="text-xs h-7 px-2"
+                title="Start 1-to-1 Direct Chat"
+              >
+                <MessageSquare className="h-3.5 w-3.5 mr-1" />
+                New Chat
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setIsCreateRoomOpen(true)}
+                className="text-xs h-7 px-2"
+                title="Create Private Group Room"
+              >
+                <Plus className="h-3.5 w-3.5 mr-1" />
+                New Room
+              </Button>
+            </div>
           </div>
 
           {/* Local Search Input */}
@@ -658,6 +741,16 @@ export default function ChatDashboardPage() {
           if (!demoMode) {
             await apiFetch(`/api/messages/${id}/view`, { method: "POST" });
           }
+        }}
+        isDemo={demoMode}
+      />
+
+      <CreateDmModal
+        isOpen={isCreateDmOpen}
+        onClose={() => setIsCreateDmOpen(false)}
+        onConversationCreated={(convId) => {
+          fetchConversations();
+          setSelectedConvId(convId);
         }}
         isDemo={demoMode}
       />

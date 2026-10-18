@@ -313,9 +313,14 @@ async function processClientMessage(client: ConnectedClient, msg: WsClientMessag
               viewLimit: msg.viewLimit,
               isDisappearing: msg.isDisappearing,
               expiresAt,
+              createdAt: new Date(env.envelope.timestamp || Date.now()),
               ...(msg.attachmentId ? { attachment: { connect: { id: msg.attachmentId } } } : {}),
             },
-            include: { attachment: true },
+            include: {
+              attachment: true,
+              senderDevice: { select: { identityPublicKey: true } },
+              sender: { select: { username: true } },
+            },
           })
         )
       );
@@ -339,6 +344,8 @@ async function processClientMessage(client: ConnectedClient, msg: WsClientMessag
           conversationId: msgRecord.conversationId,
           senderId: msgRecord.senderId,
           senderDeviceId: msgRecord.senderDeviceId,
+          senderUsername: msgRecord.sender?.username,
+          senderIdentityPublicKey: msgRecord.senderDevice?.identityPublicKey,
           messageType: msgRecord.messageType,
           envelope: {
             version: 1,
@@ -349,7 +356,7 @@ async function processClientMessage(client: ConnectedClient, msg: WsClientMessag
             iv: msgRecord.iv,
             authTag: msgRecord.authTag,
             signature: msgRecord.signature,
-            timestamp: Date.now(),
+            timestamp: new Date(msgRecord.createdAt).getTime(),
           },
           viewLimit: msgRecord.viewLimit,
           viewCount: msgRecord.viewCount,

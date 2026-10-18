@@ -117,15 +117,21 @@ export function CreateRoomModal({
         </div>
 
         <div>
-          <label className="text-xs font-semibold text-foreground">
-            Initial Members (Usernames, comma-separated)
-          </label>
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-semibold text-foreground">
+              Initial Members <span className="text-muted-foreground font-normal">(Optional)</span>
+            </label>
+            <span className="text-[10px] text-muted-foreground">Invite friends anytime via link</span>
+          </div>
           <Input
-            placeholder="e.g. bob, alice"
+            placeholder="Leave blank to start solo, or enter e.g. bob, alice"
             value={memberUsernames}
             onChange={(e) => setMemberUsernames(e.target.value)}
             className="mt-1"
           />
+          <p className="text-[11px] text-muted-foreground mt-1">
+            You will be the room owner. You can create this room with just yourself now and invite friends whenever you want using invite links.
+          </p>
         </div>
 
         {/* Ephemeral Policy */}

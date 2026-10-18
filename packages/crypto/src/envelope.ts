@@ -180,7 +180,7 @@ export async function decryptEnvelope(params: {
     envelope.timestamp
   );
 
-  const isSignatureValid = await subtle.verify(
+  let isSignatureValid = await subtle.verify(
     {
       name: "ECDSA",
       hash: { name: "SHA-256" },
@@ -189,6 +189,21 @@ export async function decryptEnvelope(params: {
     base64ToArrayBuffer(envelope.signature),
     sigData
   );
+
+  if (!isSignatureValid) {
+    const fallbackSigData = stringToArrayBuffer(
+      `cipherchat:sig:v1:${envelope.senderDeviceId}:${envelope.recipientDeviceId}:${envelope.ephemeralPublicKey}:${envelope.ciphertext}:${envelope.iv}:${envelope.authTag}`
+    );
+    isSignatureValid = await subtle.verify(
+      {
+        name: "ECDSA",
+        hash: { name: "SHA-256" },
+      },
+      params.senderIdentityPublicKey,
+      base64ToArrayBuffer(envelope.signature),
+      fallbackSigData
+    );
+  }
 
   if (!isSignatureValid) {
     throw new Error("Cryptographic verification failed: Invalid envelope signature or tampered message.");
@@ -207,16 +222,41 @@ export async function decryptEnvelope(params: {
   fullEncryptedBytes.set(ciphertextBytes, 0);
   fullEncryptedBytes.set(authTagBytes, ciphertextBytes.byteLength);
 
-  // 5. Reconstruct AAD
-  const aad = stringToArrayBuffer(`cipherchat:aad:v1:${envelope.senderDeviceId}:${envelope.recipientDeviceId}:${envelope.timestamp}`);
+  // 5. Reconstruct AAD & Decrypt
   const ivBytes = base64ToArrayBuffer(envelope.iv);
 
+  if (envelope.timestamp) {
+    try {
+      const aad = stringToArrayBuffer(
+        `cipherchat:aad:v1:${envelope.senderDeviceId}:${envelope.recipientDeviceId}:${envelope.timestamp}`
+      );
+      const decryptedBuffer = await subtle.decrypt(
+        {
+          name: "AES-GCM",
+          iv: ivBytes,
+          additionalData: aad,
+          tagLength: 128,
+        },
+        aesKey,
+        fullEncryptedBytes
+      );
+
+      const jsonString = arrayBufferToString(decryptedBuffer);
+      return JSON.parse(jsonString) as PlaintextMessagePayload;
+    } catch {
+      // Continue to try fallback AAD
+    }
+  }
+
   try {
+    const aadWithoutTs = stringToArrayBuffer(
+      `cipherchat:aad:v1:${envelope.senderDeviceId}:${envelope.recipientDeviceId}`
+    );
     const decryptedBuffer = await subtle.decrypt(
       {
         name: "AES-GCM",
         iv: ivBytes,
-        additionalData: aad,
+        additionalData: aadWithoutTs,
         tagLength: 128,
       },
       aesKey,

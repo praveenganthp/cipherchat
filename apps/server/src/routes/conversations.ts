@@ -290,6 +290,16 @@ export const conversationRoutes: FastifyPluginAsync = async (fastify) => {
       },
       include: {
         attachment: true,
+        senderDevice: {
+          select: {
+            identityPublicKey: true,
+          },
+        },
+        sender: {
+          select: {
+            username: true,
+          },
+        },
         views: {
           where: { deviceId: user.deviceId },
         },
@@ -310,6 +320,8 @@ export const conversationRoutes: FastifyPluginAsync = async (fastify) => {
         conversationId: msg.conversationId,
         senderId: msg.senderId,
         senderDeviceId: msg.senderDeviceId,
+        senderUsername: msg.sender?.username,
+        senderIdentityPublicKey: msg.senderDevice?.identityPublicKey,
         recipientId: msg.recipientId,
         recipientDeviceId: msg.recipientDeviceId,
         messageType: msg.messageType,
@@ -397,9 +409,14 @@ export const conversationRoutes: FastifyPluginAsync = async (fastify) => {
             viewLimit,
             isDisappearing,
             expiresAt,
+            createdAt: new Date(env.envelope.timestamp || Date.now()),
             ...(attachmentId ? { attachment: { connect: { id: attachmentId } } } : {}),
           },
-          include: { attachment: true },
+          include: {
+            attachment: true,
+            senderDevice: { select: { identityPublicKey: true } },
+            sender: { select: { username: true } },
+          },
         })
       )
     );
@@ -418,6 +435,8 @@ export const conversationRoutes: FastifyPluginAsync = async (fastify) => {
         conversationId: msg.conversationId,
         senderId: msg.senderId,
         senderDeviceId: msg.senderDeviceId,
+        senderUsername: msg.sender?.username,
+        senderIdentityPublicKey: msg.senderDevice?.identityPublicKey,
         messageType: msg.messageType,
         envelope: {
           version: 1,
@@ -428,7 +447,7 @@ export const conversationRoutes: FastifyPluginAsync = async (fastify) => {
           iv: msg.iv,
           authTag: msg.authTag,
           signature: msg.signature,
-          timestamp: Date.now(),
+          timestamp: new Date(msg.createdAt).getTime(),
         },
         viewLimit: msg.viewLimit,
         viewCount: msg.viewCount,
@@ -449,6 +468,7 @@ export const conversationRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(201).send({
       message: "Message delivered",
       messageIds: createdMessages.map((m) => m.id),
+      conversationId: id,
     });
   });
 };

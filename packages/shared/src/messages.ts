@@ -13,9 +13,9 @@ export const CreateDirectConversationSchema = z.object({
 export type CreateDirectConversation = z.infer<typeof CreateDirectConversationSchema>;
 
 export const CreateGroupConversationSchema = z.object({
-  title: z.string().min(1).max(100),
+  title: z.string().min(1, "Room title is required").max(100),
   description: z.string().max(500).optional(),
-  memberUsernames: z.array(z.string()).min(1),
+  memberUsernames: z.array(z.string()).default([]),
   disappearingMode: DisappearingModeEnum.default("OFF"),
   disappearingTtlSeconds: z.number().int().min(0).max(2592000).default(0), // up to 30 days
   defaultViewLimit: z.number().int().min(0).max(100).default(0),
@@ -67,6 +67,8 @@ export interface EncryptedMessageRecord {
   isDisappearing: boolean;
   expiresAt: string | null;
   createdAt: string;
+  senderIdentityPublicKey?: string;
+  senderUsername?: string;
   attachment?: {
     id: string;
     originalName: string;

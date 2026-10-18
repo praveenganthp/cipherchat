@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { EncryptedEnvelopeSchema } from "./crypto.js";
+import { EncryptedEnvelopeSchema, type EncryptedEnvelope } from "./crypto.js";
 
 /**
  * WebSocket message types sent by Client to Server
@@ -81,18 +81,10 @@ export type WsServerMessage =
       conversationId: string;
       senderId: string;
       senderDeviceId: string;
+      senderUsername?: string;
+      senderIdentityPublicKey?: string;
       messageType: "TEXT" | "ATTACHMENT" | "EVENT";
-      envelope: {
-        version: number;
-        senderDeviceId: string;
-        recipientDeviceId: string;
-        ephemeralPublicKey: string;
-        ciphertext: string;
-        iv: string;
-        authTag: string;
-        signature: string;
-        timestamp: number;
-      };
+      envelope: EncryptedEnvelope;
       viewLimit: number;
       viewCount: number;
       isDisappearing: boolean;
