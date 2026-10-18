@@ -143,10 +143,10 @@ export function ChatInput({ onSendMessage, onTyping, disabled = false }: ChatInp
             onClick={() => setViewLimit((prev) => (prev === 0 ? 1 : prev === 1 ? 2 : 0))}
             className={`flex items-center space-x-1 rounded-md px-2 py-1 text-[11px] sm:text-xs transition-colors border ${
               viewLimit === 1
-                ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
+                ? "bg-amber-500/15 text-amber-300 border-amber-500/35 font-medium"
                 : viewLimit === 2
-                ? "bg-blue-500/20 text-blue-300 border-blue-500/40"
-                : "bg-secondary text-muted-foreground border-border hover:text-foreground"
+                ? "bg-amber-500/15 text-amber-300 border-amber-500/35 font-medium"
+                : "bg-secondary/60 text-muted-foreground border-border/80 hover:text-foreground hover:bg-secondary"
             }`}
             title="Set view consumption policy"
           >
@@ -162,8 +162,8 @@ export function ChatInput({ onSendMessage, onTyping, disabled = false }: ChatInp
             onClick={() => setIsDisappearing((prev) => !prev)}
             className={`flex items-center space-x-1 rounded-md px-2 py-1 text-[11px] sm:text-xs transition-colors border ${
               isDisappearing
-                ? "bg-cipher-violet/20 text-cipher-violet border-cipher-violet/40"
-                : "bg-secondary text-muted-foreground border-border hover:text-foreground"
+                ? "bg-amber-500/15 text-amber-300 border-amber-500/35 font-medium"
+                : "bg-secondary/60 text-muted-foreground border-border/80 hover:text-foreground hover:bg-secondary"
             }`}
             title="Toggle disappearing message (24h TTL)"
           >
@@ -174,7 +174,7 @@ export function ChatInput({ onSendMessage, onTyping, disabled = false }: ChatInp
 
         <div className="hidden xs:flex items-center space-x-1 text-muted-foreground shrink-0">
           <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
-          <span className="text-[10px] sm:text-[11px]">E2EE AES-256</span>
+          <span className="font-mono text-[10px] text-emerald-400/90 font-medium">E2EE AES-256</span>
         </div>
       </div>
 

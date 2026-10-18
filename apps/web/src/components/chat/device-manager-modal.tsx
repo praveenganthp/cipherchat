@@ -128,24 +128,32 @@ export function DeviceManagerModal({ isOpen, onClose }: DeviceManagerModalProps)
           {devices.map((d) => (
             <div
               key={d.id}
-              className={`rounded-xl border p-3 transition-colors ${
+              className={`rounded-xl border p-3.5 transition-colors ${
                 d.isRevoked
-                  ? "border-destructive/30 bg-destructive/5 opacity-60"
+                  ? "border-rose-500/30 bg-rose-500/5 opacity-60"
                   : d.isCurrentDevice
-                  ? "border-primary/50 bg-primary/5"
-                  : "border-border bg-card"
+                  ? "border-emerald-500/40 bg-emerald-500/5"
+                  : "border-border/80 bg-secondary/30"
               }`}
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-center space-x-2.5">
-                  <div className="rounded-lg bg-secondary p-2 text-foreground">
+                  <div className="rounded-lg bg-secondary/70 p-2 text-foreground border border-border/60">
                     {getDeviceIcon(d.deviceType)}
                   </div>
                   <div>
                     <div className="flex items-center space-x-2">
                       <h4 className="text-sm font-semibold text-foreground">{d.deviceName}</h4>
-                      {d.isCurrentDevice && <Badge variant="default">This Device</Badge>}
-                      {d.isRevoked && <Badge variant="destructive">Revoked</Badge>}
+                      {d.isCurrentDevice && (
+                        <Badge variant="outline" className="border-emerald-500/30 text-emerald-400 text-[10px]">
+                          This Device
+                        </Badge>
+                      )}
+                      {d.isRevoked && (
+                        <Badge variant="destructive" className="text-[10px]">
+                          Revoked
+                        </Badge>
+                      )}
                     </div>
                     <p className="text-[11px] text-muted-foreground mt-0.5">
                       Last seen: {formatDate(d.lastSeenAt)} • Registered: {formatDate(d.createdAt)}
@@ -159,7 +167,7 @@ export function DeviceManagerModal({ isOpen, onClose }: DeviceManagerModalProps)
                     size="icon"
                     onClick={() => handleRevoke(d.id)}
                     isLoading={revokingId === d.id}
-                    className="text-destructive hover:bg-destructive/20 h-8 w-8"
+                    className="text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 h-8 w-8"
                     title="Revoke device"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -168,20 +176,20 @@ export function DeviceManagerModal({ isOpen, onClose }: DeviceManagerModalProps)
               </div>
 
               {/* Public Key Display */}
-              <div className="mt-2.5 rounded-lg bg-navy-950 p-2 border border-border/40 font-mono text-[10px] text-muted-foreground break-all flex items-center justify-between">
+              <div className="mt-2.5 rounded-lg bg-[#090A0C] p-2 border border-border/60 font-mono text-[10px] text-muted-foreground break-all flex items-center justify-between">
                 <span className="truncate max-w-[340px]">
                   ECDSA SPKI: {d.identityPublicKey.slice(0, 32)}...
                 </span>
-                <Key className="h-3 w-3 text-primary shrink-0 ml-1" />
+                <Key className="h-3 w-3 text-emerald-400 shrink-0 ml-1" />
               </div>
             </div>
           ))}
         </div>
 
-        <div className="rounded-lg bg-navy-900 border border-border/60 p-3 text-xs text-muted-foreground flex items-start space-x-2">
-          <AlertCircle className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-          <p>
-            Revoking a device immediately invalidates its sessions and public keys on the server.
+        <div className="rounded-xl bg-secondary/30 border border-border/70 p-3 text-xs text-muted-foreground flex items-start space-x-2.5">
+          <AlertCircle className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
+          <p className="text-[11px] leading-relaxed">
+            Revoking an endpoint immediately invalidates its sessions and public keys.
             The revoked device will be permanently excluded from receiving newly wrapped group keys.
           </p>
         </div>

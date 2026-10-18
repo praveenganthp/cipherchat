@@ -22,15 +22,15 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ) => {
     const variants = {
       primary:
-        "bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm focus-visible:ring-primary",
+        "bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-medium shadow-sm border border-emerald-500/30 transition-all focus-visible:ring-1 focus-visible:ring-emerald-400",
       secondary:
-        "bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border focus-visible:ring-ring",
+        "bg-secondary/90 hover:bg-secondary text-foreground border border-border/80 transition-colors focus-visible:ring-1 focus-visible:ring-emerald-500/40",
       outline:
-        "border border-border bg-transparent hover:bg-secondary/50 text-foreground focus-visible:ring-ring",
+        "border border-border/80 bg-transparent hover:bg-secondary/60 text-foreground transition-colors focus-visible:ring-1 focus-visible:ring-emerald-500/40",
       ghost:
-        "hover:bg-secondary/60 text-foreground hover:text-foreground focus-visible:ring-ring",
+        "hover:bg-secondary/60 text-muted-foreground hover:text-foreground transition-colors focus-visible:ring-1 focus-visible:ring-emerald-500/40",
       destructive:
-        "bg-destructive hover:bg-destructive/90 text-destructive-foreground focus-visible:ring-destructive",
+        "bg-rose-600/90 hover:bg-rose-600 text-white border border-rose-500/30 transition-colors focus-visible:ring-1 focus-visible:ring-rose-400",
     };
 
     const sizes = {

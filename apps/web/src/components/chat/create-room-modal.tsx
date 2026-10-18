@@ -135,16 +135,16 @@ export function CreateRoomModal({
         </div>
 
         {/* Ephemeral Policy */}
-        <div>
+        <div className="space-y-1.5">
           <label className="text-xs font-semibold text-foreground">Room Disappearing Policy</label>
           <div className="grid grid-cols-2 gap-2 mt-1">
             <button
               type="button"
               onClick={() => setDisappearingMode("OFF")}
-              className={`rounded-lg border p-2 text-xs text-left transition-colors ${
+              className={`rounded-xl border p-2.5 text-xs text-left transition-colors ${
                 disappearingMode === "OFF"
-                  ? "border-primary bg-primary/10 text-primary-foreground font-semibold"
-                  : "border-border bg-secondary/50 text-muted-foreground hover:text-foreground"
+                  ? "border-emerald-500/60 bg-emerald-500/10 text-emerald-400 font-semibold"
+                  : "border-border/80 bg-secondary/30 text-muted-foreground hover:bg-secondary hover:text-foreground"
               }`}
             >
               Standard Retention
@@ -152,20 +152,20 @@ export function CreateRoomModal({
             <button
               type="button"
               onClick={() => setDisappearingMode("TIMER")}
-              className={`rounded-lg border p-2 text-xs text-left transition-colors ${
+              className={`rounded-xl border p-2.5 text-xs text-left transition-colors ${
                 disappearingMode === "TIMER"
-                  ? "border-primary bg-primary/10 text-primary-foreground font-semibold"
-                  : "border-border bg-secondary/50 text-muted-foreground hover:text-foreground"
+                  ? "border-emerald-500/60 bg-emerald-500/10 text-emerald-400 font-semibold"
+                  : "border-border/80 bg-secondary/30 text-muted-foreground hover:bg-secondary hover:text-foreground"
               }`}
             >
-              <Clock className="h-3.5 w-3.5 inline mr-1" />
+              <Clock className="h-3.5 w-3.5 inline mr-1 text-emerald-400" />
               Time-to-Live (TTL)
             </button>
           </div>
         </div>
 
         {disappearingMode === "TIMER" && (
-          <div>
+          <div className="space-y-1.5">
             <label className="text-xs font-semibold text-foreground">TTL Expiration (Hours)</label>
             <Input
               type="number"
@@ -173,17 +173,17 @@ export function CreateRoomModal({
               max="720"
               value={ttlHours}
               onChange={(e) => setTtlHours(e.target.value)}
-              className="mt-1"
+              className="mt-1 bg-secondary/40 border-border/80 focus:border-emerald-500/60"
             />
           </div>
         )}
 
-        <div className="flex items-center justify-end space-x-2 pt-2 border-t border-border/60">
+        <div className="flex items-center justify-end space-x-2 pt-3 border-t border-border/60">
           <Button type="button" variant="outline" size="sm" onClick={onClose}>
             Cancel
           </Button>
           <Button type="submit" variant="primary" size="sm" isLoading={isLoading}>
-            Create Room
+            Create Encrypted Room
           </Button>
         </div>
       </form>

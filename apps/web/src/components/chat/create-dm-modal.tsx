@@ -72,42 +72,49 @@ export function CreateDmModal({
           </div>
         )}
 
-        <div>
+        <div className="space-y-1.5">
           <label className="text-xs font-semibold text-foreground">Recipient Username</label>
-          <div className="relative mt-1">
+          <div className="relative">
             <Input
               placeholder="e.g. bob or alice"
               value={recipient}
-              onChange={(e) => setRecipient(e.target.value)}
+              onChange={(e) => setRecipient(e.target.value.toLowerCase().trim())}
               required
               autoFocus
-              className="pr-10"
+              className="pr-10 bg-secondary/40 border-border/80 focus:border-emerald-500/60 font-mono text-xs"
             />
             <div className="absolute right-3 top-2.5 text-muted-foreground pointer-events-none">
               <UserPlus className="h-4 w-4" />
             </div>
           </div>
-          <p className="text-[11px] text-muted-foreground mt-1.5">
-            Tip: You can chat with pre-seeded users like <span className="font-mono text-primary">bob</span> or <span className="font-mono text-primary">alice</span>.
-          </p>
+          
+          {/* Quick seeded contact chips */}
+          <div className="flex items-center space-x-2 pt-1 text-[11px] text-muted-foreground">
+            <span>Quick add:</span>
+            <button
+              type="button"
+              onClick={() => setRecipient("bob")}
+              className="rounded-md border border-border/70 bg-secondary/50 px-2 py-0.5 text-xs font-mono text-emerald-400 hover:border-emerald-500/40 hover:bg-secondary transition-colors"
+            >
+              @bob
+            </button>
+            <button
+              type="button"
+              onClick={() => setRecipient("alice")}
+              className="rounded-md border border-border/70 bg-secondary/50 px-2 py-0.5 text-xs font-mono text-emerald-400 hover:border-emerald-500/40 hover:bg-secondary transition-colors"
+            >
+              @alice
+            </button>
+          </div>
         </div>
 
-        <div className="flex justify-end space-x-2 pt-2 border-t border-border">
-          <Button type="button" variant="secondary" size="sm" onClick={onClose} disabled={isLoading}>
+        <div className="flex justify-end space-x-2 pt-3 border-t border-border/60">
+          <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={isLoading}>
             Cancel
           </Button>
-          <Button type="submit" size="sm" disabled={isLoading || !recipient.trim()}>
-            {isLoading ? (
-              <>
-                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                Connecting...
-              </>
-            ) : (
-              <>
-                <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
-                Start Chat
-              </>
-            )}
+          <Button type="submit" variant="primary" size="sm" disabled={isLoading || !recipient.trim()} isLoading={isLoading}>
+            <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
+            <span>Start Encrypted Chat</span>
           </Button>
         </div>
       </form>

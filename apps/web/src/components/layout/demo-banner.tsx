@@ -11,7 +11,7 @@ export function DemoBanner() {
   if (!demoMode) return null;
 
   return (
-    <div className="bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent border-b border-amber-500/30 px-4 py-2 text-xs flex items-center justify-between z-40 relative">
+    <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-1.5 text-xs flex items-center justify-between z-40 relative">
       <div className="flex items-center space-x-2">
         <Sparkles className="h-4 w-4 text-amber-400 shrink-0" />
         <span className="font-semibold text-amber-300">DEMO MODE ACTIVE:</span>

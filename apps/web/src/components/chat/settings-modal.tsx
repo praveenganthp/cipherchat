@@ -127,41 +127,41 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         </div>
 
         {/* Granular Privacy Toggles */}
-        <div className="border-t border-border/60 pt-3 space-y-3">
+        <div className="border-t border-border/60 pt-3.5 space-y-3">
           <h4 className="text-xs font-semibold text-foreground flex items-center space-x-1.5">
-            <Shield className="h-4 w-4 text-primary" />
-            <span>Privacy & Metadata Controls</span>
+            <Shield className="h-4 w-4 text-emerald-400" />
+            <span>Privacy &amp; Metadata Controls</span>
           </h4>
 
           {/* Read Receipts */}
-          <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/30 p-3">
+          <div className="flex items-center justify-between rounded-xl border border-border/70 bg-secondary/30 p-3">
             <div>
               <p className="text-xs font-semibold text-foreground">Read Receipts</p>
-              <p className="text-[11px] text-muted-foreground">
-                Allow senders to see when you have read their messages.
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Allow senders to see double emerald checkmarks when you open their messages.
               </p>
             </div>
             <input
               type="checkbox"
               checked={readReceipts}
               onChange={(e) => setReadReceipts(e.target.checked)}
-              className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
+              className="h-4 w-4 rounded border-border text-emerald-500 accent-emerald-500 focus:ring-emerald-500/30"
             />
           </div>
 
           {/* Typing Indicators */}
-          <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/30 p-3">
+          <div className="flex items-center justify-between rounded-xl border border-border/70 bg-secondary/30 p-3">
             <div>
               <p className="text-xs font-semibold text-foreground">Typing Indicators</p>
-              <p className="text-[11px] text-muted-foreground">
-                Broadcast when you are actively typing a message.
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Broadcast ephemeral status when you are actively composing a reply.
               </p>
             </div>
             <input
               type="checkbox"
               checked={typingIndicators}
               onChange={(e) => setTypingIndicators(e.target.checked)}
-              className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
+              className="h-4 w-4 rounded border-border text-emerald-500 accent-emerald-500 focus:ring-emerald-500/30"
             />
           </div>
 
@@ -171,7 +171,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             <select
               value={presence}
               onChange={(e: any) => setPresence(e.target.value)}
-              className="w-full rounded-md border border-border bg-card px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full rounded-xl border border-border/80 bg-secondary/40 px-3 py-2 text-xs text-foreground focus:outline-none focus:border-emerald-500/60 transition-colors"
             >
               <option value="EVERYONE">Visible to Everyone</option>
               <option value="CONTACTS_ONLY">Visible to Contacts Only</option>
@@ -180,7 +180,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           </div>
         </div>
 
-        <div className="flex items-center justify-end space-x-2 pt-2 border-t border-border/60">
+        <div className="flex items-center justify-end space-x-2 pt-3 border-t border-border/60">
           <Button type="button" variant="outline" size="sm" onClick={onClose}>
             Cancel
           </Button>

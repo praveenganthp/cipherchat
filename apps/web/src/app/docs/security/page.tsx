@@ -12,39 +12,44 @@ import {
   AlertTriangle,
   ArrowLeft,
   CheckCircle2,
+  Terminal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
 export default function SecurityDocsPage() {
   return (
-    <div className="flex-1 bg-navy-900 py-12 px-4 sm:px-6">
+    <div className="flex-1 bg-background py-12 px-4 sm:px-6">
       <div className="container mx-auto max-w-4xl space-y-10">
         {/* Header */}
         <div className="space-y-3">
           <Link href="/chat">
-            <Button variant="ghost" size="sm" className="mb-2 -ml-2 text-xs">
+            <Button variant="ghost" size="sm" className="mb-2 -ml-2 text-xs text-muted-foreground hover:text-foreground">
               <ArrowLeft className="h-3.5 w-3.5 mr-1" />
               Back to Messaging
             </Button>
           </Link>
           <div className="flex items-center space-x-2">
-            <Badge variant="default">Security Whitepaper</Badge>
-            <Badge variant="outline">Web Crypto W3C</Badge>
+            <Badge variant="outline" className="border-emerald-500/30 text-emerald-400">
+              Security Whitepaper
+            </Badge>
+            <Badge variant="outline" className="border-border text-muted-foreground">
+              W3C Web Crypto
+            </Badge>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-foreground tracking-tight">
-            CipherChat Cryptographic Architecture & Security Specification
+          <h1 className="text-3xl sm:text-4xl font-bold text-foreground tracking-tight">
+            Cryptographic Architecture &amp; Security Specification
           </h1>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            This document outlines the cryptographic primitives, zero-knowledge threat model, key
+            Technical specification of the cryptographic primitives, zero-knowledge threat model, key
             exchange mechanisms, forward secrecy ratchets, and view-count enforcement guarantees.
           </p>
         </div>
 
         {/* Threat Model Section */}
-        <section className="rounded-2xl border border-border bg-card p-6 sm:p-8 space-y-4">
+        <section className="rounded-2xl border border-border/80 bg-card/90 p-6 sm:p-8 space-y-4 shadow-xl">
           <div className="flex items-center space-x-2.5">
-            <div className="rounded-lg bg-primary/20 p-2 text-primary">
+            <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/25 p-2 text-emerald-400">
               <ShieldCheck className="h-5 w-5" />
             </div>
             <h2 className="text-lg font-bold text-foreground">1. Zero-Knowledge Threat Model</h2>
@@ -76,9 +81,9 @@ export default function SecurityDocsPage() {
         </section>
 
         {/* Cryptographic Primitives Table */}
-        <section className="rounded-2xl border border-border bg-card p-6 sm:p-8 space-y-4">
+        <section className="rounded-2xl border border-border/80 bg-card/90 p-6 sm:p-8 space-y-4 shadow-xl">
           <div className="flex items-center space-x-2.5">
-            <div className="rounded-lg bg-cipher-violet/20 p-2 text-cipher-violet">
+            <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/25 p-2 text-emerald-400">
               <Key className="h-5 w-5" />
             </div>
             <h2 className="text-lg font-bold text-foreground">2. Cryptographic Primitives</h2>
@@ -86,44 +91,44 @@ export default function SecurityDocsPage() {
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="border-b border-border text-muted-foreground uppercase text-[10px]">
+              <thead className="border-b border-border/80 text-muted-foreground uppercase text-[10px]">
                 <tr>
-                  <th className="py-2 pr-4 font-semibold">Purpose</th>
-                  <th className="py-2 pr-4 font-semibold">Primitive</th>
-                  <th className="py-2 pr-4 font-semibold">Specification</th>
-                  <th className="py-2 font-semibold">Parameters</th>
+                  <th className="py-2.5 pr-4 font-semibold">Purpose</th>
+                  <th className="py-2.5 pr-4 font-semibold">Primitive</th>
+                  <th className="py-2.5 pr-4 font-semibold">Specification</th>
+                  <th className="py-2.5 font-semibold">Parameters</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/40 text-foreground">
                 <tr>
-                  <td className="py-2.5 pr-4 font-medium">Device Identity & Signing</td>
-                  <td className="py-2.5 pr-4 font-mono text-primary">ECDSA</td>
+                  <td className="py-2.5 pr-4 font-medium">Device Identity &amp; Signing</td>
+                  <td className="py-2.5 pr-4 font-mono text-emerald-400 font-semibold">ECDSA</td>
                   <td className="py-2.5 pr-4 text-muted-foreground">FIPS 186-4</td>
-                  <td className="py-2.5">NIST P-256 + SHA-256</td>
+                  <td className="py-2.5 font-mono text-xs">NIST P-256 + SHA-256</td>
                 </tr>
                 <tr>
                   <td className="py-2.5 pr-4 font-medium">Asymmetric Key Agreement</td>
-                  <td className="py-2.5 pr-4 font-mono text-primary">ECDH</td>
+                  <td className="py-2.5 pr-4 font-mono text-emerald-400 font-semibold">ECDH</td>
                   <td className="py-2.5 pr-4 text-muted-foreground">NIST SP 800-56A</td>
-                  <td className="py-2.5">NIST P-256 (secp256r1)</td>
+                  <td className="py-2.5 font-mono text-xs">NIST P-256 (secp256r1)</td>
                 </tr>
                 <tr>
                   <td className="py-2.5 pr-4 font-medium">Key Derivation Function</td>
-                  <td className="py-2.5 pr-4 font-mono text-primary">HKDF</td>
+                  <td className="py-2.5 pr-4 font-mono text-emerald-400 font-semibold">HKDF</td>
                   <td className="py-2.5 pr-4 text-muted-foreground">RFC 5869</td>
-                  <td className="py-2.5">HKDF-SHA-256 (Domain separated)</td>
+                  <td className="py-2.5 font-mono text-xs">HKDF-SHA-256 (Domain separated)</td>
                 </tr>
                 <tr>
                   <td className="py-2.5 pr-4 font-medium">Symmetric Authenticated Cipher</td>
-                  <td className="py-2.5 pr-4 font-mono text-primary">AES-GCM</td>
+                  <td className="py-2.5 pr-4 font-mono text-emerald-400 font-semibold">AES-GCM</td>
                   <td className="py-2.5 pr-4 text-muted-foreground">NIST SP 800-38D</td>
-                  <td className="py-2.5">256-bit key, 96-bit IV, 128-bit tag</td>
+                  <td className="py-2.5 font-mono text-xs">256-bit key, 96-bit IV, 128-bit tag</td>
                 </tr>
                 <tr>
                   <td className="py-2.5 pr-4 font-medium">Safety Fingerprints</td>
-                  <td className="py-2.5 pr-4 font-mono text-primary">SHA-256</td>
+                  <td className="py-2.5 pr-4 font-mono text-emerald-400 font-semibold">SHA-256</td>
                   <td className="py-2.5 pr-4 text-muted-foreground">FIPS 180-4</td>
-                  <td className="py-2.5">12 numeric blocks (60 digits)</td>
+                  <td className="py-2.5 font-mono text-xs">12 numeric blocks (60 digits)</td>
                 </tr>
               </tbody>
             </table>
@@ -131,44 +136,44 @@ export default function SecurityDocsPage() {
         </section>
 
         {/* Message Flow Architecture */}
-        <section className="rounded-2xl border border-border bg-card p-6 sm:p-8 space-y-4">
+        <section className="rounded-2xl border border-border/80 bg-card/90 p-6 sm:p-8 space-y-4 shadow-xl">
           <div className="flex items-center space-x-2.5">
-            <div className="rounded-lg bg-emerald-500/20 p-2 text-emerald-400">
+            <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/25 p-2 text-emerald-400">
               <Database className="h-5 w-5" />
             </div>
             <h2 className="text-lg font-bold text-foreground">3. Message Envelope Lifecycle</h2>
           </div>
 
           <div className="space-y-3 font-mono text-xs text-muted-foreground">
-            <div className="rounded-xl bg-navy-950 p-4 border border-border/80 space-y-2">
-              <p className="text-primary font-semibold">// 1. Client Encrypts Outbound Envelope</p>
-              <p>ephemeralKey = generateECDHKeyPair(&quot;P-256&quot;)</p>
-              <p>sharedSecret = ECDH(ephemeralKey.private, recipientSignedPreKey)</p>
-              <p>messageKey = HKDF_SHA256(sharedSecret, salt, info)</p>
-              <p>ciphertext = AES_256_GCM_Encrypt(messageKey, iv, aad, plaintextPayload)</p>
-              <p>signature = ECDSA_Sign(senderIdentityPrivateKey, envelopeDigest)</p>
+            <div className="rounded-xl bg-[#090A0C] p-4 border border-border/70 space-y-2">
+              <p className="text-emerald-400 font-semibold">// 1. Client Encrypts Outbound Envelope</p>
+              <p className="text-zinc-300">ephemeralKey = generateECDHKeyPair(&quot;P-256&quot;)</p>
+              <p className="text-zinc-300">sharedSecret = ECDH(ephemeralKey.private, recipientSignedPreKey)</p>
+              <p className="text-zinc-300">messageKey = HKDF_SHA256(sharedSecret, salt, info)</p>
+              <p className="text-zinc-300">ciphertext = AES_256_GCM_Encrypt(messageKey, iv, aad, plaintextPayload)</p>
+              <p className="text-zinc-300">signature = ECDSA_Sign(senderIdentityPrivateKey, envelopeDigest)</p>
             </div>
 
-            <div className="rounded-xl bg-navy-950 p-4 border border-border/80 space-y-2">
-              <p className="text-emerald-400 font-semibold">// 2. Fastify Server Stores &amp; Relays</p>
-              <p>INSERT INTO &quot;EncryptedMessage&quot; (recipientDeviceId, ciphertext, iv, authTag, signature, ephemeralPublicKey)</p>
-              <p>// Server observes NO plaintext or decryption keys</p>
+            <div className="rounded-xl bg-[#090A0C] p-4 border border-border/70 space-y-2">
+              <p className="text-amber-400 font-semibold">// 2. Fastify Server Stores &amp; Relays</p>
+              <p className="text-zinc-300">INSERT INTO &quot;EncryptedMessage&quot; (recipientDeviceId, ciphertext, iv, authTag, signature, ephemeralPublicKey)</p>
+              <p className="text-zinc-500">// Server observes NO plaintext or decryption keys</p>
             </div>
 
-            <div className="rounded-xl bg-navy-950 p-4 border border-border/80 space-y-2">
-              <p className="text-accent font-semibold">// 3. Recipient Verifies &amp; Decrypts</p>
-              <p>verifySignature = ECDSA_Verify(senderIdentityPublicKey, signature, envelopeDigest)</p>
-              <p>sharedSecret = ECDH(recipientPreKeyPrivate, ephemeralPublicKey)</p>
-              <p>messageKey = HKDF_SHA256(sharedSecret, salt, info)</p>
-              <p>plaintextPayload = AES_256_GCM_Decrypt(messageKey, iv, aad, ciphertext)</p>
+            <div className="rounded-xl bg-[#090A0C] p-4 border border-border/70 space-y-2">
+              <p className="text-emerald-400 font-semibold">// 3. Recipient Verifies &amp; Decrypts</p>
+              <p className="text-zinc-300">verifySignature = ECDSA_Verify(senderIdentityPublicKey, signature, envelopeDigest)</p>
+              <p className="text-zinc-300">sharedSecret = ECDH(recipientPreKeyPrivate, ephemeralPublicKey)</p>
+              <p className="text-zinc-300">messageKey = HKDF_SHA256(sharedSecret, salt, info)</p>
+              <p className="text-zinc-300">plaintextPayload = AES_256_GCM_Decrypt(messageKey, iv, aad, ciphertext)</p>
             </div>
           </div>
         </section>
 
         {/* Transparent Limitations */}
-        <section className="rounded-2xl border border-border bg-card p-6 sm:p-8 space-y-4">
+        <section className="rounded-2xl border border-border/80 bg-card/90 p-6 sm:p-8 space-y-4 shadow-xl">
           <div className="flex items-center space-x-2.5">
-            <div className="rounded-lg bg-amber-500/20 p-2 text-amber-400">
+            <div className="rounded-xl bg-amber-500/10 border border-amber-500/25 p-2 text-amber-400">
               <AlertTriangle className="h-5 w-5" />
             </div>
             <h2 className="text-lg font-bold text-foreground">4. Honest Limitations &amp; Disclosures</h2>

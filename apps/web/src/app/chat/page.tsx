@@ -3,6 +3,7 @@
 import * as React from "react";
 import {
   Shield,
+  ShieldCheck,
   Search,
   Plus,
   Users,
@@ -17,6 +18,12 @@ import {
   Sparkles,
   Link2,
   ArrowLeft,
+  PanelRight,
+  Copy,
+  Key,
+  Info,
+  X,
+  Radio,
 } from "lucide-react";
 import { useAuthStore } from "@/lib/auth-store";
 import { apiFetch } from "@/lib/api";
@@ -32,6 +39,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ChatInput } from "@/components/chat/chat-input";
+import { ConversationDetails } from "@/components/chat/conversation-details";
+import { EnvelopeModal } from "@/components/chat/envelope-modal";
 import { SafetyModal } from "@/components/chat/safety-modal";
 import { AttachmentModal } from "@/components/chat/attachment-modal";
 import { CreateRoomModal } from "@/components/chat/create-room-modal";
@@ -54,7 +63,15 @@ export default function ChatDashboardPage() {
   const [messages, setMessages] = React.useState<EncryptedMessageRecord[]>([]);
   const [plaintextCache, setPlaintextCache] = React.useState<Record<string, string>>({});
   const [searchQuery, setSearchQuery] = React.useState("");
+  const [filterType, setFilterType] = React.useState<"ALL" | "DIRECT" | "ROOMS">("ALL");
   const [isTypingPeer, setIsTypingPeer] = React.useState<string | null>(null);
+
+  // Layout & UI panels
+  const [isDetailsOpen, setIsDetailsOpen] = React.useState(false);
+  const [copiedMsgId, setCopiedMsgId] = React.useState<string | null>(null);
+  const [inspectedEnvelopeMsg, setInspectedEnvelopeMsg] = React.useState<EncryptedMessageRecord | null>(null);
+  const [isLoadingConversations, setIsLoadingConversations] = React.useState(true);
+  const [isLoadingMessages, setIsLoadingMessages] = React.useState(false);
 
   // Modals
   const [isSafetyOpen, setIsSafetyOpen] = React.useState(false);
@@ -63,12 +80,19 @@ export default function ChatDashboardPage() {
   const [isCreateDmOpen, setIsCreateDmOpen] = React.useState(false);
   const [isCreateRoomOpen, setIsCreateRoomOpen] = React.useState(false);
   const [isInviteOpen, setIsInviteOpen] = React.useState(false);
-  const [isLoadingMessages, setIsLoadingMessages] = React.useState(false);
 
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
 
+  // Auto-open 3rd panel on desktop screens
+  React.useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth >= 1280) {
+      setIsDetailsOpen(true);
+    }
+  }, []);
+
   // 1. Fetch conversations
   const fetchConversations = React.useCallback(async () => {
+    setIsLoadingConversations(true);
     if (demoMode) {
       setConversations(DEMO_CONVERSATIONS);
       if (!selectedConvId && DEMO_CONVERSATIONS.length > 0) {
@@ -76,6 +100,7 @@ export default function ChatDashboardPage() {
           setSelectedConvId(DEMO_CONVERSATIONS[0].id);
         }
       }
+      setIsLoadingConversations(false);
       return;
     }
 
@@ -89,6 +114,8 @@ export default function ChatDashboardPage() {
       }
     } catch {
       // Not logged in or backend unavailable
+    } finally {
+      setIsLoadingConversations(false);
     }
   }, [demoMode, selectedConvId]);
 
@@ -351,7 +378,12 @@ export default function ChatDashboardPage() {
         createdAt: new Date().toISOString(),
       };
 
-      setMessages((prev) => [...prev, dummyMsg]);
+      setMessages((prev) => {
+        const next = [...prev, dummyMsg];
+        return next.sort(
+          (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
+      });
       setPlaintextCache((prev) => ({
         ...prev,
         [newMsgId]: params.content || `Encrypted file: ${params.file?.name}`,
@@ -425,26 +457,54 @@ export default function ChatDashboardPage() {
     setIsSafetyOpen(true);
   };
 
+  // 6. Clear local decrypted cache
+  const handleClearLocalCache = () => {
+    if (typeof window !== "undefined") {
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith("cc_pt_")) {
+          localStorage.removeItem(key);
+        }
+      });
+      setPlaintextCache({});
+    }
+  };
+
+  // 7. Copy single message plaintext
+  const handleCopyMessage = (id: string, text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedMsgId(id);
+    setTimeout(() => setCopiedMsgId(null), 2000);
+  };
+
   // Filter conversations locally without leaking query to server
   const filteredConversations = conversations.filter((c) => {
     const name = c.title || c.otherMember?.displayName || c.otherMember?.username || "";
-    return name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = name.toLowerCase().includes(searchQuery.toLowerCase());
+    if (!matchesSearch) return false;
+    if (filterType === "DIRECT") return c.type === "DIRECT";
+    if (filterType === "ROOMS") return c.type === "GROUP";
+    return true;
   });
 
   return (
-    <div className="flex-1 flex overflow-hidden">
-      {/* Sidebar: Conversation List */}
+    <div className="flex-1 flex overflow-hidden bg-background">
+      {/* PANEL 1: Sidebar / Conversation List */}
       <aside
-        className={`border-r border-border bg-card/40 flex-col shrink-0 ${
+        className={`border-r border-border/80 bg-card/60 flex-col shrink-0 transition-all ${
           selectedConvId
-            ? "hidden md:flex w-full md:w-80 lg:w-96"
-            : "flex w-full md:w-80 lg:w-96"
+            ? "hidden md:flex w-full md:w-80 lg:w-88"
+            : "flex w-full md:w-80 lg:w-88"
         }`}
       >
-        <div className="p-3 border-b border-border/60 space-y-2.5">
+        <div className="p-3 border-b border-border/70 space-y-2.5">
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-bold text-foreground">Encrypted Chats</h2>
             <div className="flex items-center space-x-1.5">
+              <h2 className="text-sm font-bold tracking-tight text-foreground">Encrypted Chats</h2>
+              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-secondary/80 text-muted-foreground border border-border/60">
+                {conversations.length}
+              </span>
+            </div>
+            <div className="flex items-center space-x-1">
               <Button
                 variant="primary"
                 size="sm"
@@ -453,7 +513,7 @@ export default function ChatDashboardPage() {
                 title="Start 1-to-1 Direct Chat"
               >
                 <MessageSquare className="h-3.5 w-3.5 mr-1" />
-                New Chat
+                Direct
               </Button>
               <Button
                 variant="secondary"
@@ -462,106 +522,183 @@ export default function ChatDashboardPage() {
                 className="text-xs h-7 px-2"
                 title="Create Private Group Room"
               >
-                <Plus className="h-3.5 w-3.5 mr-1" />
-                New Room
+                <Plus className="h-3.5 w-3.5 mr-1 text-emerald-400" />
+                Room
               </Button>
             </div>
           </div>
 
+          {/* Filter Segmented Controls */}
+          <div className="grid grid-cols-3 gap-1 p-0.5 rounded-lg bg-secondary/40 border border-border/60 text-xs">
+            <button
+              onClick={() => setFilterType("ALL")}
+              className={`py-1 rounded-md text-[11px] font-medium transition-all ${
+                filterType === "ALL"
+                  ? "bg-secondary text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              All
+            </button>
+            <button
+              onClick={() => setFilterType("DIRECT")}
+              className={`py-1 rounded-md text-[11px] font-medium transition-all ${
+                filterType === "DIRECT"
+                  ? "bg-secondary text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Direct
+            </button>
+            <button
+              onClick={() => setFilterType("ROOMS")}
+              className={`py-1 rounded-md text-[11px] font-medium transition-all ${
+                filterType === "ROOMS"
+                  ? "bg-secondary text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Rooms
+            </button>
+          </div>
+
           {/* Local Search Input */}
           <div className="relative">
-            <Search className="h-4 w-4 absolute left-3 top-2.5 text-muted-foreground" />
+            <Search className="h-3.5 w-3.5 absolute left-3 top-2.5 text-muted-foreground" />
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search conversations locally..."
-              className="pl-9 h-9 text-xs"
+              className="pl-8.5 h-8.5 text-xs bg-secondary/30 border-border/70 placeholder:text-muted-foreground/60"
             />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Conversation Items */}
-        <div className="flex-1 overflow-y-auto divide-y divide-border/40">
-          {filteredConversations.length === 0 && (
-            <div className="text-center py-10 px-4 text-xs text-muted-foreground">
-              No conversations found. Create a private room or send a direct message.
+        {/* Conversation Items List */}
+        <div className="flex-1 overflow-y-auto divide-y divide-border/30">
+          {isLoadingConversations && (
+            <div className="p-3 space-y-3 animate-pulse">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="flex items-center space-x-3">
+                  <div className="h-10 w-10 rounded-full bg-secondary/60 shrink-0" />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="h-3 bg-secondary/60 rounded w-2/3" />
+                    <div className="h-2.5 bg-secondary/40 rounded w-1/2" />
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 
-          {filteredConversations.map((c) => {
-            const isSelected = c.id === selectedConvId;
-            const title =
-              c.type === "GROUP"
-                ? c.title || "Private Group"
-                : c.otherMember?.displayName || c.otherMember?.username || "Contact";
+          {!isLoadingConversations && filteredConversations.length === 0 && (
+            <div className="text-center py-12 px-4 text-xs text-muted-foreground space-y-2">
+              <MessageSquare className="h-8 w-8 text-muted-foreground/40 mx-auto" />
+              <p className="font-medium text-foreground">No conversations match</p>
+              <p className="text-[11px]">
+                Start a 1-to-1 encrypted chat or create a private room to begin.
+              </p>
+            </div>
+          )}
 
-            return (
-              <button
-                key={c.id}
-                onClick={() => setSelectedConvId(c.id)}
-                className={`w-full text-left p-3 flex items-start space-x-3 transition-colors ${
-                  isSelected ? "bg-secondary/70 border-l-2 border-primary" : "hover:bg-secondary/30"
-                }`}
-              >
-                {/* Avatar with Presence Indicator */}
-                <div className="relative shrink-0">
-                  <div className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center font-bold text-sm text-foreground overflow-hidden border border-border">
-                    {c.type === "GROUP" ? (
-                      <Users className="h-5 w-5 text-primary" />
-                    ) : c.otherMember?.avatarUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={c.otherMember.avatarUrl} alt={title} className="h-full w-full object-cover" />
-                    ) : (
-                      <User className="h-5 w-5 text-muted-foreground" />
+          {!isLoadingConversations &&
+            filteredConversations.map((c) => {
+              const isSelected = c.id === selectedConvId;
+              const title =
+                c.type === "GROUP"
+                  ? c.title || "Private Group"
+                  : c.otherMember?.displayName || c.otherMember?.username || "Contact";
+
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => setSelectedConvId(c.id)}
+                  className={`w-full text-left p-3 flex items-start space-x-3 transition-colors ${
+                    isSelected
+                      ? "bg-secondary/70 border-l-2 border-emerald-500"
+                      : "hover:bg-secondary/30"
+                  }`}
+                >
+                  {/* Avatar with Presence Indicator */}
+                  <div className="relative shrink-0">
+                    <div className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center font-bold text-sm text-foreground overflow-hidden border border-border/80">
+                      {c.type === "GROUP" ? (
+                        <Users className="h-5 w-5 text-emerald-400" />
+                      ) : c.otherMember?.avatarUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={c.otherMember.avatarUrl}
+                          alt={title}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <User className="h-5 w-5 text-muted-foreground" />
+                      )}
+                    </div>
+                    {c.type === "DIRECT" && c.otherMember?.isOnline && (
+                      <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-card" />
                     )}
                   </div>
-                  {c.type === "DIRECT" && c.otherMember?.isOnline && (
-                    <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-emerald-500 border-2 border-card" />
-                  )}
-                </div>
 
-                {/* Details */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-semibold text-foreground truncate">{title}</h4>
-                    {c.lastMessage && (
-                      <span className="text-[10px] text-muted-foreground">
-                        {formatDate(c.lastMessage.createdAt)}
-                      </span>
-                    )}
-                  </div>
+                  {/* Details */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-semibold text-foreground truncate">{title}</h4>
+                      {c.lastMessage && (
+                        <span className="text-[10px] font-mono text-muted-foreground">
+                          {formatDate(c.lastMessage.createdAt)}
+                        </span>
+                      )}
+                    </div>
 
-                  <div className="flex items-center justify-between mt-1">
-                    <p className="text-xs text-muted-foreground truncate">
-                      {c.type === "GROUP"
-                        ? `${c.memberCount} members`
-                        : c.otherMember?.isOnline
-                        ? "Online"
-                        : "Offline"}
-                    </p>
-                    {c.unreadCount > 0 && (
-                      <span className="rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">
-                        {c.unreadCount}
-                      </span>
-                    )}
+                    <div className="flex items-center justify-between mt-1">
+                      <p className="text-xs text-muted-foreground truncate">
+                        {c.type === "GROUP"
+                          ? `${c.memberCount} members`
+                          : c.otherMember?.isOnline
+                          ? "Online"
+                          : "Offline"}
+                      </p>
+                      <div className="flex items-center space-x-1">
+                        {c.disappearingMode !== "OFF" && (
+                          <span
+                            title="Disappearing messages enabled"
+                            className="text-amber-400 text-[10px]"
+                          >
+                            <Clock className="h-3 w-3 inline" />
+                          </span>
+                        )}
+                        {c.unreadCount > 0 && (
+                          <span className="rounded-full bg-emerald-500 px-1.5 py-0.2 text-[10px] font-bold text-white">
+                            {c.unreadCount}
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </button>
-            );
-          })}
+                </button>
+              );
+            })}
         </div>
       </aside>
 
-      {/* Main Conversation Stream */}
+      {/* PANEL 2: Center / Main Active Chat Stream */}
       <section
-        className={`flex-1 flex-col bg-navy-950/40 min-w-0 ${
+        className={`flex-1 flex-col bg-charcoal-950 min-w-0 ${
           selectedConvId ? "flex w-full" : "hidden md:flex"
         }`}
       >
         {activeConversation ? (
           <>
             {/* Conversation Header */}
-            <header className="h-14 border-b border-border bg-card/50 backdrop-blur-md px-3 sm:px-4 flex items-center justify-between shrink-0">
+            <header className="h-14 border-b border-border/80 bg-card/70 backdrop-blur-md px-3 sm:px-4 flex items-center justify-between shrink-0">
               <div className="flex items-center space-x-2 sm:space-x-3 truncate mr-2">
                 {/* Mobile Back Button */}
                 <Button
@@ -605,9 +742,9 @@ export default function ChatDashboardPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => setIsInviteOpen(true)}
-                    className="text-xs h-8 px-2 sm:px-3"
+                    className="text-xs h-8 px-2 sm:px-3 border-border/80"
                   >
-                    <Link2 className="h-3.5 w-3.5 sm:mr-1 text-primary" />
+                    <Link2 className="h-3.5 w-3.5 sm:mr-1 text-emerald-400" />
                     <span className="hidden sm:inline">Invite</span>
                   </Button>
                 ) : (
@@ -615,26 +752,53 @@ export default function ChatDashboardPage() {
                     variant="outline"
                     size="sm"
                     onClick={handleOpenSafety}
-                    className="text-xs h-8 px-2 sm:px-3"
+                    className="text-xs h-8 px-2 sm:px-3 border-emerald-500/25 hover:bg-emerald-500/10 hover:border-emerald-500/40"
                   >
-                    <Shield className="h-3.5 w-3.5 sm:mr-1 text-primary" />
+                    <Shield className="h-3.5 w-3.5 sm:mr-1 text-emerald-400" />
                     <span className="hidden sm:inline">Verify Keys</span>
                   </Button>
                 )}
+
+                {/* Third Panel Toggle Button */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setIsDetailsOpen((prev) => !prev)}
+                  className={`h-8 w-8 text-muted-foreground hover:text-foreground ${
+                    isDetailsOpen ? "bg-secondary text-foreground border border-border/80" : ""
+                  }`}
+                  title="Toggle Security & Room Details Inspector"
+                >
+                  <PanelRight className="h-4 w-4" />
+                </Button>
               </div>
             </header>
 
             {/* Messages Feed */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              {isLoadingMessages && (
-                <p className="text-center text-xs text-muted-foreground py-4">
-                  Decrypting message envelopes...
+              {/* Trust Anchor Banner */}
+              <div className="mx-auto my-3 max-w-sm rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 text-center text-xs text-muted-foreground">
+                <div className="flex items-center justify-center space-x-1.5 font-medium text-emerald-400 mb-0.5">
+                  <ShieldCheck className="h-4 w-4" />
+                  <span>End-to-End Encrypted Tunnel</span>
+                </div>
+                <p className="text-[11px] leading-relaxed">
+                  Keys are negotiated via ECDH P-256 and authenticated with AES-256-GCM. Unencrypted
+                  payloads never touch the network relay or database.
                 </p>
+              </div>
+
+              {isLoadingMessages && (
+                <div className="space-y-3 py-4 animate-pulse">
+                  <div className="h-12 bg-secondary/40 rounded-2xl w-48 mr-auto" />
+                  <div className="h-14 bg-secondary/50 rounded-2xl w-64 ml-auto" />
+                  <div className="h-12 bg-secondary/40 rounded-2xl w-56 mr-auto" />
+                </div>
               )}
 
               {messages.length === 0 && !isLoadingMessages && (
                 <div className="text-center py-12 text-xs text-muted-foreground max-w-sm mx-auto space-y-2">
-                  <div className="h-10 w-10 rounded-full bg-primary/20 text-primary mx-auto flex items-center justify-center">
+                  <div className="h-10 w-10 rounded-full bg-emerald-500/10 text-emerald-400 mx-auto flex items-center justify-center border border-emerald-500/20">
                     <Lock className="h-5 w-5" />
                   </div>
                   <p className="font-semibold text-foreground">No messages yet</p>
@@ -648,31 +812,60 @@ export default function ChatDashboardPage() {
               {messages.map((m) => {
                 const isMe = m.senderId === (user?.id || DEMO_USER.id);
                 const plaintext = plaintextCache[m.id] || "[Encrypted Message Payload]";
+                const isCopied = copiedMsgId === m.id;
 
                 return (
                   <div
                     key={m.id}
-                    className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}
+                    className={`flex flex-col group ${isMe ? "items-end" : "items-start"}`}
                   >
                     <div
-                      className={`relative max-w-md rounded-2xl p-3 text-sm shadow-sm ${
+                      className={`relative max-w-md rounded-2xl p-3 text-sm shadow-sm transition-all ${
                         isMe
-                          ? "bg-primary text-primary-foreground rounded-br-none"
-                          : "bg-secondary text-foreground rounded-bl-none border border-border/80"
+                          ? "bg-secondary/90 border border-emerald-500/25 rounded-br-sm text-foreground hover:border-emerald-500/40"
+                          : "bg-card border border-border/80 rounded-bl-sm text-foreground hover:border-border"
                       }`}
                     >
+                      {/* Floating Micro-Actions Toolbar */}
+                      <div
+                        className={`absolute -top-3 ${
+                          isMe ? "right-2" : "left-2"
+                        } hidden group-hover:flex items-center space-x-1 rounded-md border border-border/80 bg-popover px-1.5 py-0.5 shadow-md text-xs z-10`}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => handleCopyMessage(m.id, plaintext)}
+                          className="text-muted-foreground hover:text-foreground p-0.5 rounded"
+                          title="Copy message plaintext"
+                        >
+                          {isCopied ? (
+                            <Check className="h-3 w-3 text-emerald-400" />
+                          ) : (
+                            <Copy className="h-3 w-3" />
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setInspectedEnvelopeMsg(m)}
+                          className="text-muted-foreground hover:text-emerald-400 p-0.5 rounded"
+                          title="Inspect cryptographic envelope"
+                        >
+                          <Key className="h-3 w-3" />
+                        </button>
+                      </div>
+
                       {/* Attached File Preview */}
                       {m.attachment && (
                         <div
                           onClick={() => setActiveAttachmentMsg(m)}
                           className={`mb-2 rounded-xl p-2.5 flex items-center justify-between cursor-pointer border transition-colors ${
                             isMe
-                              ? "bg-primary-foreground/10 border-primary-foreground/20 hover:bg-primary-foreground/20"
-                              : "bg-card border-border hover:bg-card/80"
+                              ? "bg-secondary/80 border-border/80 hover:bg-secondary"
+                              : "bg-secondary/50 border-border/70 hover:bg-secondary/80"
                           }`}
                         >
                           <div className="flex items-center space-x-2 truncate">
-                            <Paperclip className="h-4 w-4 shrink-0" />
+                            <Paperclip className="h-4 w-4 shrink-0 text-emerald-400" />
                             <span className="font-semibold text-xs truncate">
                               {m.attachment.originalName}
                             </span>
@@ -694,23 +887,19 @@ export default function ChatDashboardPage() {
                       <p className="leading-relaxed break-words">{plaintext}</p>
 
                       {/* Message Metadata Footer */}
-                      <div
-                        className={`flex items-center justify-end space-x-1.5 mt-1 text-[10px] ${
-                          isMe ? "text-primary-foreground/75" : "text-muted-foreground"
-                        }`}
-                      >
+                      <div className="flex items-center justify-end space-x-1.5 mt-1 text-[10px] text-muted-foreground">
                         {m.isDisappearing && (
-                          <span title="Disappearing message">
-                            <Clock className="h-3 w-3 inline mr-0.5" />
+                          <span title="Disappearing message (24h TTL)">
+                            <Clock className="h-3 w-3 inline mr-0.5 text-amber-400" />
                           </span>
                         )}
-                        <span>{formatDate(m.createdAt)}</span>
+                        <span className="font-mono">{formatDate(m.createdAt)}</span>
                         {isMe && (
                           <span>
                             {m.viewCount > 0 ? (
-                              <CheckCheck className="h-3.5 w-3.5 inline text-blue-300" />
+                              <CheckCheck className="h-3.5 w-3.5 inline text-emerald-400" />
                             ) : (
-                              <Check className="h-3.5 w-3.5 inline" />
+                              <Check className="h-3.5 w-3.5 inline text-muted-foreground" />
                             )}
                           </span>
                         )}
@@ -722,8 +911,8 @@ export default function ChatDashboardPage() {
 
               {/* Peer Typing Indicator */}
               {isTypingPeer && (
-                <div className="text-xs text-muted-foreground italic flex items-center space-x-1 py-1">
-                  <div className="h-1.5 w-1.5 rounded-full bg-primary animate-ping" />
+                <div className="text-xs text-muted-foreground italic flex items-center space-x-1.5 py-1">
+                  <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping" />
                   <span>{isTypingPeer}</span>
                 </div>
               )}
@@ -744,7 +933,9 @@ export default function ChatDashboardPage() {
         ) : (
           <div className="flex-1 flex items-center justify-center p-6 text-center text-muted-foreground">
             <div className="max-w-sm space-y-3">
-              <MessageSquare className="h-12 w-12 text-primary/40 mx-auto" />
+              <div className="h-12 w-12 rounded-xl bg-emerald-500/10 text-emerald-400 mx-auto flex items-center justify-center border border-emerald-500/20">
+                <MessageSquare className="h-6 w-6" />
+              </div>
               <h3 className="font-semibold text-foreground text-base">Select a Conversation</h3>
               <p className="text-xs">
                 Choose a conversation from the sidebar or start a new private encrypted room.
@@ -754,7 +945,25 @@ export default function ChatDashboardPage() {
         )}
       </section>
 
+      {/* PANEL 3: Collapsible Right Panel / Security & Details Inspector */}
+      {activeConversation && isDetailsOpen && (
+        <ConversationDetails
+          conversation={activeConversation}
+          user={user}
+          onClose={() => setIsDetailsOpen(false)}
+          onVerifyKeys={handleOpenSafety}
+          onInvite={() => setIsInviteOpen(true)}
+          onClearLocalCache={handleClearLocalCache}
+        />
+      )}
+
       {/* Modals */}
+      <EnvelopeModal
+        isOpen={!!inspectedEnvelopeMsg}
+        onClose={() => setInspectedEnvelopeMsg(null)}
+        message={inspectedEnvelopeMsg}
+      />
+
       <SafetyModal
         isOpen={isSafetyOpen}
         onClose={() => setIsSafetyOpen(false)}

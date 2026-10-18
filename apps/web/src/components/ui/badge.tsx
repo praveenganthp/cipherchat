@@ -11,12 +11,12 @@ export function Badge({
   ...props
 }: BadgeProps) {
   const variants = {
-    default: "bg-primary/20 text-primary border border-primary/30",
-    secondary: "bg-secondary text-secondary-foreground border border-border",
-    outline: "text-foreground border border-border",
-    success: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30",
-    warning: "bg-amber-500/20 text-amber-400 border border-amber-500/30",
-    destructive: "bg-destructive/20 text-destructive border border-destructive/30",
+    default: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/25",
+    secondary: "bg-secondary/70 text-secondary-foreground border border-border/80",
+    outline: "text-muted-foreground border border-border/70 bg-transparent",
+    success: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/25",
+    warning: "bg-amber-500/10 text-amber-300 border border-amber-500/25",
+    destructive: "bg-rose-500/10 text-rose-300 border border-rose-500/25",
   };
 
   return (

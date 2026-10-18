@@ -116,15 +116,15 @@ export function AttachmentModal({
 
         {/* Decrypted Content Container or Prompt */}
         {!isDecrypted ? (
-          <div className="rounded-xl border border-dashed border-border/80 bg-navy-950 p-6 text-center space-y-3">
-            <Eye className="h-8 w-8 text-muted-foreground mx-auto" />
+          <div className="rounded-xl border border-dashed border-border/80 bg-[#090A0C] p-6 text-center space-y-3">
+            <Eye className="h-8 w-8 text-emerald-400/80 mx-auto" />
             <div>
               <p className="text-sm font-semibold text-foreground">
                 {isLimited
                   ? `Viewing will consume 1 of your ${viewLimit} authorized view${viewLimit > 1 ? "s" : ""}.`
                   : "Click below to decrypt and inspect this file."}
               </p>
-              <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+              <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto leading-relaxed">
                 File key is negotiated client-side via ECDH. Server only serves the raw encrypted ciphertext blob.
               </p>
             </div>
@@ -135,6 +135,7 @@ export function AttachmentModal({
               onClick={handleOpenAndDecrypt}
               isLoading={isConsuming}
               disabled={isExpired}
+              className="shadow-sm shadow-emerald-950/40"
             >
               {isExpired ? "Attachment Expired" : "Decrypt & View Content"}
             </Button>
@@ -145,7 +146,7 @@ export function AttachmentModal({
               <CheckCircle2 className="h-4 w-4" />
               <span>Successfully Decrypted in Local Memory</span>
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground leading-relaxed">
               This preview was decrypted client-side using Web Crypto subtle AES-256-GCM.
               When you close this modal, the decrypted buffer will be purged from browser memory.
             </p>
@@ -165,9 +166,9 @@ export function AttachmentModal({
         )}
 
         {/* Security and Screenshot Disclaimer */}
-        <div className="rounded-lg bg-navy-900 border border-border/60 p-3 text-xs text-muted-foreground flex items-start space-x-2">
+        <div className="rounded-xl bg-secondary/30 border border-border/70 p-3 text-xs text-muted-foreground flex items-start space-x-2.5">
           <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
-          <p>
+          <p className="text-[11px] leading-relaxed">
             <strong>Security Notice:</strong> While atomic server counters enforce view counts
             before delivery, view limits cannot physically prevent a recipient from taking a photo of their
             screen with an external camera.

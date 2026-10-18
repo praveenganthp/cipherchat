@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ShieldCheck, Key, Lock, CheckCircle2, Copy, ArrowRight } from "lucide-react";
+import { ShieldCheck, Key, Lock, CheckCircle2, Copy, ArrowRight, Check, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cryptoManager } from "@/lib/crypto-store";
@@ -35,101 +35,171 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="flex-1 flex items-center justify-center p-4">
-      <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-8 shadow-2xl">
-        <div className="text-center mb-6">
-          <Badge variant="default" className="mb-2">
-            Device Key Ceremony
+    <div className="flex-1 flex items-center justify-center p-4 bg-background">
+      <div className="w-full max-w-lg rounded-2xl border border-border/80 bg-card/90 backdrop-blur-xl p-7 sm:p-8 shadow-2xl space-y-6">
+        {/* Step Progress Bar */}
+        <div className="flex items-center justify-between pb-2 border-b border-border/60">
+          <div className="flex items-center space-x-2">
+            <span
+              className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold ${
+                step === "keys"
+                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
+                  : "bg-secondary text-muted-foreground"
+              }`}
+            >
+              1
+            </span>
+            <span className="text-xs font-medium text-foreground">Keys</span>
+            <span className="text-muted-foreground/40">/</span>
+            <span
+              className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold ${
+                step === "fingerprint"
+                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
+                  : "bg-secondary text-muted-foreground"
+              }`}
+            >
+              2
+            </span>
+            <span className="text-xs font-medium text-foreground">Safety Number</span>
+            <span className="text-muted-foreground/40">/</span>
+            <span
+              className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold ${
+                step === "ready"
+                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
+                  : "bg-secondary text-muted-foreground"
+              }`}
+            >
+              3
+            </span>
+            <span className="text-xs font-medium text-foreground">Active</span>
+          </div>
+
+          <Badge variant="outline" className="border-emerald-500/30 text-emerald-400 text-[10px]">
+            Device Ceremony
           </Badge>
-          <h2 className="text-2xl font-bold text-foreground">Initialize Cryptographic Identity</h2>
-          <p className="text-xs text-muted-foreground mt-1">
-            Setting up your secure enclave keys and contact verification safety number.
-          </p>
         </div>
 
+        {/* Step 1: Key Generation */}
         {step === "keys" && (
           <div className="space-y-6 text-center">
-            <div className="rounded-xl border border-border/80 bg-navy-950 p-6 space-y-3">
-              <Key className="h-10 w-10 text-primary mx-auto" />
-              <h3 className="text-sm font-semibold text-foreground">
-                Generate Zero-Knowledge Keypair
-              </h3>
-              <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-                We will use the Web Crypto API to generate your NIST P-256 identity key and signed
-                prekey. These keys stay in your browser and never leave your machine.
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 shadow-sm">
+              <Key className="h-7 w-7" />
+            </div>
+
+            <div className="space-y-2">
+              <h2 className="text-2xl font-bold tracking-tight text-foreground">
+                Initialize Cryptographic Keys
+              </h2>
+              <p className="text-xs text-muted-foreground max-w-sm mx-auto leading-relaxed">
+                Generate zero-knowledge NIST P-256 identity keypairs and signed prekeys directly in your browser.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-border/80 bg-secondary/30 p-4 text-left space-y-2.5">
+              <div className="flex items-center space-x-2 text-xs font-semibold text-foreground">
+                <ShieldCheck className="h-4 w-4 text-emerald-400" />
+                <span>Web Crypto API Hardware Primitives</span>
+              </div>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                Private keys are flagged non-extractable and persisted inside client storage. Private keys never touch
+                the network or our servers under any condition.
               </p>
             </div>
 
             <Button
               variant="primary"
               size="lg"
-              className="w-full"
+              className="w-full h-11"
               isLoading={isGenerating}
               onClick={handleGenerate}
             >
-              Generate Device Keys
+              <span>Generate Hardware-Backed Keys</span>
+              <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           </div>
         )}
 
+        {/* Step 2: Fingerprint Verification */}
         {step === "fingerprint" && fingerprint && (
           <div className="space-y-6">
-            <div className="rounded-xl border border-border bg-navy-950 p-4 space-y-2">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                Your Public Key Safety Fingerprint
-              </span>
-              <div className="font-mono text-sm font-bold tracking-wider text-primary-foreground bg-secondary/50 p-3 rounded-lg border border-border/60 text-center">
-                {fingerprint}
+            <div className="text-center space-y-1.5">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 mb-2">
+                <Shield className="h-6 w-6" />
               </div>
-              <div className="flex justify-end pt-1">
+              <h2 className="text-xl font-bold tracking-tight text-foreground">
+                Your Public Safety Fingerprint
+              </h2>
+              <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                Contacts can compare this fingerprint to guarantee no Man-In-The-Middle attacker is intercepting your channel.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-border/80 bg-secondary/30 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  SHA-256 Digest
+                </span>
                 <button
                   type="button"
                   onClick={handleCopy}
-                  className="flex items-center space-x-1 text-xs text-primary hover:underline"
+                  className="flex items-center space-x-1 text-xs text-emerald-400 hover:text-emerald-300 font-medium"
                 >
-                  <Copy className="h-3.5 w-3.5" />
-                  <span>{copied ? "Copied Fingerprint" : "Copy Fingerprint"}</span>
+                  {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                  <span>{copied ? "Copied" : "Copy Digest"}</span>
                 </button>
               </div>
-            </div>
 
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Contacts can verify this number when chatting with you to ensure there is no
-              Man-In-The-Middle attacker between your devices.
-            </p>
+              <div className="font-mono text-sm font-semibold tracking-wider text-foreground bg-background/80 p-3.5 rounded-lg border border-border/80 text-center break-all selection:bg-emerald-500/30">
+                {fingerprint}
+              </div>
 
-            <Button
-              variant="primary"
-              size="lg"
-              className="w-full"
-              onClick={() => setStep("ready")}
-            >
-              Continue to Messaging
-            </Button>
-          </div>
-        )}
-
-        {step === "ready" && (
-          <div className="space-y-6 text-center">
-            <div className="rounded-full bg-emerald-500/20 text-emerald-400 p-4 w-16 h-16 mx-auto flex items-center justify-center">
-              <CheckCircle2 className="h-8 w-8" />
-            </div>
-
-            <div>
-              <h3 className="text-lg font-bold text-foreground">Cryptographic Setup Complete</h3>
-              <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
-                Your keys are stored securely in browser memory and local storage. You are now ready
-                to send and receive end-to-end encrypted messages.
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                This fingerprint is derived deterministically from your public identity key. Changing devices or rotating keys will update this value.
               </p>
             </div>
 
             <Button
               variant="primary"
               size="lg"
-              className="w-full"
+              className="w-full h-11"
+              onClick={() => setStep("ready")}
+            >
+              <span>Confirm & Continue</span>
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+          </div>
+        )}
+
+        {/* Step 3: Ready */}
+        {step === "ready" && (
+          <div className="space-y-6 text-center">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 shadow-sm">
+              <CheckCircle2 className="h-8 w-8" />
+            </div>
+
+            <div className="space-y-2">
+              <h2 className="text-2xl font-bold tracking-tight text-foreground">
+                Cryptographic Identity Ready
+              </h2>
+              <p className="text-xs text-muted-foreground max-w-sm mx-auto leading-relaxed">
+                All session ratchets and public prekeys are primed. You are ready to exchange zero-knowledge messages.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 text-xs text-emerald-300 text-left space-y-1">
+              <div className="font-semibold text-emerald-400">Security Guarantee:</div>
+              <p className="text-muted-foreground text-[11px]">
+                ECDH P-256 key exchanges happen peer-to-peer over encrypted envelopes. Ciphertext is signed with ECDSA before transmission.
+              </p>
+            </div>
+
+            <Button
+              variant="primary"
+              size="lg"
+              className="w-full h-11"
               onClick={() => router.push("/chat")}
             >
-              <span>Go to Chat Dashboard</span>
+              <span>Enter Messaging Workspace</span>
               <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           </div>
