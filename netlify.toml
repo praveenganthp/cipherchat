@@ -1,11 +1,9 @@
 [build]
-  base = "apps/web"
-  command = "npm run build"
-  publish = ".next"
+  command = "npm run build:web"
+  publish = "apps/web/.next"
 
 [build.environment]
   NODE_VERSION = "22"
-  NPM_FLAGS = "--legacy-peer-deps"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
@@ -18,4 +16,4 @@
     X-XSS-Protection = "1; mode=block"
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "camera=(self), microphone=(self), geolocation=()"
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' http://localhost:4000 ws://localhost:4000 wss: https:; media-src 'self' blob: data:;"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://cipherchat-api-6e15.onrender.com wss://cipherchat-api-6e15.onrender.com http://localhost:4000 ws://localhost:4000 wss: https:; media-src 'self' blob: data:;"
