@@ -64,7 +64,7 @@ export function ConversationDetails({
 
   return (
     <aside
-      className={`w-full xl:w-88 2xl:w-96 border-l border-border/80 bg-card/95 xl:bg-card/60 flex flex-col shrink-0 overflow-y-auto h-full ${
+      className={`w-full xl:w-88 2xl:w-96 border-l border-border/80 bg-card/95 xl:bg-card/60 flex flex-col shrink-0 overflow-y-auto h-full min-h-0 ${
         className || ""
       }`}
     >

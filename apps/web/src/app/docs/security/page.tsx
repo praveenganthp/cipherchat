@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge";
 
 export default function SecurityDocsPage() {
   return (
-    <div className="flex-1 bg-background py-12 px-4 sm:px-6">
+    <div className="flex-1 bg-background py-12 px-4 sm:px-6 overflow-y-auto h-full">
       <div className="container mx-auto max-w-4xl space-y-10">
         {/* Header */}
         <div className="space-y-3">

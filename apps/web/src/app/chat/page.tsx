@@ -24,6 +24,7 @@ import {
   Info,
   X,
   Radio,
+  ChevronDown,
 } from "lucide-react";
 import { useAuthStore } from "@/lib/auth-store";
 import { apiFetch } from "@/lib/api";
@@ -81,8 +82,33 @@ export default function ChatDashboardPage() {
   const [isCreateRoomOpen, setIsCreateRoomOpen] = React.useState(false);
   const [isInviteOpen, setIsInviteOpen] = React.useState(false);
 
+  const messagesContainerRef = React.useRef<HTMLDivElement>(null);
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   const peerTypingTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const isNearBottomRef = React.useRef(true);
+  const lastConvIdRef = React.useRef<string | null>(null);
+  const prevMessagesCountRef = React.useRef(0);
+  const [showScrollBottomBtn, setShowScrollBottomBtn] = React.useState(false);
+
+  const scrollToBottom = React.useCallback((behavior: ScrollBehavior = "smooth") => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTo({
+        top: messagesContainerRef.current.scrollHeight,
+        behavior,
+      });
+      isNearBottomRef.current = true;
+      setShowScrollBottomBtn(false);
+    }
+  }, []);
+
+  const handleMessagesScroll = React.useCallback(() => {
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    const nearBottom = distanceFromBottom < 80;
+    isNearBottomRef.current = nearBottom;
+    setShowScrollBottomBtn(!nearBottom);
+  }, []);
 
   // Auto-open 3rd panel on desktop screens
   React.useEffect(() => {
@@ -150,7 +176,22 @@ export default function ChatDashboardPage() {
       const chronological = [...res.messages].sort(
         (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
       );
-      setMessages(chronological);
+      setMessages((prev) => {
+        if (
+          prev.length === chronological.length &&
+          prev.every(
+            (m, idx) =>
+              m.id === chronological[idx]?.id &&
+              m.isRead === chronological[idx]?.isRead &&
+              m.isDelivered === chronological[idx]?.isDelivered &&
+              m.viewCount === chronological[idx]?.viewCount &&
+              m.isExpired === chronological[idx]?.isExpired
+          )
+        ) {
+          return prev;
+        }
+        return chronological;
+      });
 
       // Decrypt messages locally in browser memory
       for (const msg of res.messages) {
@@ -224,10 +265,34 @@ export default function ChatDashboardPage() {
     return () => clearInterval(interval);
   }, [selectedConvId, demoMode, fetchMessages]);
 
-  // Scroll to bottom when messages change
+  // Reset scroll and go to bottom when switching conversation
   React.useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isTypingPeer]);
+    if (selectedConvId !== lastConvIdRef.current) {
+      lastConvIdRef.current = selectedConvId;
+      isNearBottomRef.current = true;
+      setShowScrollBottomBtn(false);
+      prevMessagesCountRef.current = 0;
+      const t = setTimeout(() => {
+        scrollToBottom("auto");
+      }, 60);
+      return () => clearTimeout(t);
+    }
+  }, [selectedConvId, scrollToBottom]);
+
+  // Auto-scroll logic: ONLY auto-scroll down if the user was ALREADY at the bottom!
+  // If the user has scrolled up to read older messages, stay there!
+  React.useEffect(() => {
+    if (messages.length === 0) return;
+
+    const countChanged = messages.length !== prevMessagesCountRef.current;
+    prevMessagesCountRef.current = messages.length;
+
+    if (isNearBottomRef.current) {
+      requestAnimationFrame(() => {
+        scrollToBottom(countChanged ? "smooth" : "auto");
+      });
+    }
+  }, [messages, scrollToBottom]);
 
   // 3. Setup real-time WebSocket listeners
   React.useEffect(() => {
@@ -431,6 +496,11 @@ export default function ChatDashboardPage() {
         ...prev,
         [newMsgId]: params.content || `Encrypted file: ${params.file?.name}`,
       }));
+      isNearBottomRef.current = true;
+      setShowScrollBottomBtn(false);
+      requestAnimationFrame(() => {
+        scrollToBottom("smooth");
+      });
       return;
     }
 
@@ -488,6 +558,11 @@ export default function ChatDashboardPage() {
     }
 
     await fetchMessages(selectedConvId);
+    isNearBottomRef.current = true;
+    setShowScrollBottomBtn(false);
+    requestAnimationFrame(() => {
+      scrollToBottom("smooth");
+    });
   };
 
   // 5. Open Safety Fingerprint modal
@@ -530,10 +605,10 @@ export default function ChatDashboardPage() {
   });
 
   return (
-    <div className="flex-1 flex overflow-hidden bg-background">
+    <div className="flex-1 flex h-full min-h-0 overflow-hidden bg-background">
       {/* PANEL 1: Sidebar / Conversation List */}
       <aside
-        className={`border-r border-border/80 bg-card/60 flex-col shrink-0 transition-all ${
+        className={`border-r border-border/80 bg-card/60 flex-col shrink-0 h-full min-h-0 overflow-hidden transition-all ${
           selectedConvId
             ? "hidden md:flex w-full md:w-80 lg:w-88"
             : "flex w-full md:w-80 lg:w-88"
@@ -734,7 +809,7 @@ export default function ChatDashboardPage() {
 
       {/* PANEL 2: Center / Main Active Chat Stream */}
       <section
-        className={`flex-1 flex-col bg-charcoal-950 min-w-0 ${
+        className={`flex-1 flex-col bg-charcoal-950 min-w-0 h-full min-h-0 overflow-hidden relative ${
           selectedConvId ? "flex w-full" : "hidden md:flex"
         }`}
       >
@@ -856,7 +931,11 @@ export default function ChatDashboardPage() {
             </header>
 
             {/* Messages Feed */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            <div
+              ref={messagesContainerRef}
+              onScroll={handleMessagesScroll}
+              className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0"
+            >
               {/* Trust Anchor Banner */}
               <div className="mx-auto my-3 max-w-sm rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 text-center text-xs text-muted-foreground">
                 <div className="flex items-center justify-center space-x-1.5 font-medium text-emerald-400 mb-0.5">
@@ -1012,6 +1091,21 @@ export default function ChatDashboardPage() {
               <div ref={messagesEndRef} />
             </div>
 
+            {/* Floating Scroll to Bottom Button */}
+            {showScrollBottomBtn && (
+              <button
+                type="button"
+                onClick={() => {
+                  isNearBottomRef.current = true;
+                  scrollToBottom("smooth");
+                }}
+                className="absolute bottom-20 right-6 z-30 flex h-9 w-9 items-center justify-center rounded-full bg-card/95 border border-border shadow-xl text-muted-foreground hover:text-emerald-400 hover:border-emerald-500/40 hover:bg-secondary transition-all animate-in fade-in zoom-in-75 duration-200 cursor-pointer"
+                aria-label="Scroll to newest messages"
+              >
+                <ChevronDown className="h-5 w-5" />
+              </button>
+            )}
+
             {/* Chat Input */}
             <ChatInput
               onSendMessage={handleSendMessage}
@@ -1060,7 +1154,7 @@ export default function ChatDashboardPage() {
           </div>
 
           {/* Desktop Inline Docked Column */}
-          <div className="hidden xl:flex shrink-0">
+          <div className="hidden xl:flex shrink-0 h-full min-h-0 overflow-hidden">
             <ConversationDetails
               conversation={activeConversation}
               user={user}

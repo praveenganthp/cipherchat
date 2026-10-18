@@ -73,7 +73,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="flex-1 flex items-center justify-center p-4 bg-background">
+    <div className="flex-1 flex items-center justify-center p-4 bg-background overflow-y-auto h-full">
       <div className="w-full max-w-lg rounded-2xl border border-border/80 bg-card/90 backdrop-blur-xl p-7 sm:p-8 shadow-2xl space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">

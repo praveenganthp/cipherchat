@@ -16,12 +16,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
-      <body className="min-h-screen bg-background text-foreground antialiased flex flex-col selection:bg-emerald-500/20 selection:text-emerald-300">
+    <html lang="en" className="dark h-full">
+      <body className="h-full bg-background text-foreground antialiased flex flex-col overflow-hidden selection:bg-emerald-500/20 selection:text-emerald-300">
         <Providers>
           <DemoBanner />
           <Navbar />
-          <main className="flex-1 flex flex-col">{children}</main>
+          <main className="flex-1 min-h-0 flex flex-col overflow-hidden">{children}</main>
         </Providers>
       </body>
     </html>
